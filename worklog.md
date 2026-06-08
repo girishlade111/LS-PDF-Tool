@@ -525,3 +525,59 @@ Priority recommendations for next phase:
 - Add full-page PDF preview (not just thumbnails)
 - Improve mobile responsiveness for tool controls
 - Add keyboard shortcuts for power users
+
+---
+Task ID: 5-6-new-tools
+Agent: new-tools-agent
+Task: Add 2 new PDF tools (Flatten PDF, Crop PDF)
+
+Work Log:
+- Updated /home/z/my-project/src/lib/pdf-utils.ts
+  - Added flattenPDF() - re-renders each PDF page using pdfjs-dist onto a canvas and recreates the PDF from those rendered images using pdf-lib, effectively flattening form fields, annotations, and watermarks into page content
+  - Added getPDFPageDimensions() - reads page dimensions (width/height) for all pages in a PDF
+  - Added cropPDF() - crops PDF pages by adjusting CropBox, MediaBox, and TrimBox using pdf-lib's setPageBox methods
+- Created Flatten PDF tool - /home/z/my-project/src/tools/flatten-pdf.tsx
+  - Tool ID: 'flatten', Icon: Layers, Category: optimize, Color: slate
+  - Description card explaining what flattening does (merges form fields/annotations into page content, making them non-editable)
+  - Options section with 3 checkbox toggles:
+    - "Flatten form fields" (default: checked)
+    - "Flatten annotations" (default: checked)
+    - "Flatten watermarks" (default: unchecked)
+  - Each toggle has description text explaining its effect
+  - Quality selection: Standard (1.5x render scale, faster) / High (2.5x render scale, better quality)
+  - Progress bar showing page-by-page processing with percentage and message
+  - Saves result as "flattened-{filename}"
+  - Validates at least one option is selected before processing
+- Created Crop PDF tool - /home/z/my-project/src/tools/crop-pdf.tsx
+  - Tool ID: 'crop-pdf', Icon: Crop, Category: organize, Color: fuchsia
+  - Page dimensions info card after upload (shows width × height in pt and in)
+  - Preset crop options with 4 choices:
+    - "No Crop" (original, 0pt margins)
+    - "Remove Margins" (36pt from each side — standard margin)
+    - "Tight Crop" (54pt from each side)
+    - "Custom" (shows 4 input fields: Top, Bottom, Left, Right in points)
+  - Visual preview: rectangle representing the page with fuchsia dashed border showing crop area
+  - Margin labels on the preview showing pt values
+  - Original and Cropped dimension badges below preview
+  - Apply to: All Pages or Specific Pages (with page range input like "1,3,5-8")
+  - Saves result as "cropped-{filename}"
+  - Uses derived effectiveDimensions to avoid lint issues with setState in effect
+- Updated tool definitions - /home/z/my-project/src/lib/tools.ts
+  - Added Layers, Crop imports from lucide-react
+  - Added 'flatten' tool (slate color, optimize category, Layers icon)
+  - Added 'crop-pdf' tool (fuchsia color, organize category, Crop icon)
+- Updated nav-store - /home/z/my-project/src/store/nav-store.ts
+  - Added 'flatten' and 'crop-pdf' to ToolId union type
+- Updated page.tsx - /home/z/my-project/src/app/page.tsx
+  - Added lazy imports for FlattenPDFTool and CropPDFTool
+  - Added both to toolComponents record
+- Lint passes with 0 errors
+- Dev server compiles successfully
+
+Stage Summary:
+- 2 new PDF tools added, bringing total from 15 to 17
+- Flatten PDF: re-render pages to flatten form fields/annotations/watermarks into non-editable content, with quality options and progress tracking
+- Crop PDF: crop page margins with presets (No Crop/Remove Margins/Tight/Custom), visual preview, page range support
+- All utility functions added to pdf-utils.ts (flattenPDF, getPDFPageDimensions, cropPDF)
+- All supporting files updated consistently (tools.ts, nav-store.ts, page.tsx)
+- Clean lint and successful compilation

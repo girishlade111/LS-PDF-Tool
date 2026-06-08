@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, lazy, Suspense } from 'react';
+import React, { useEffect, useRef, useState, useCallback, lazy, Suspense } from 'react';
 import {
   FileText,
   Shield,
@@ -17,6 +17,11 @@ import {
   Upload,
   Settings2,
   Play,
+  Download,
+  Wrench,
+  Star,
+  Search,
+  Command,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -75,6 +80,12 @@ const DeletePagesTool = lazy(() =>
 const PDFToPNGTool = lazy(() =>
   import('@/tools/pdf-to-png').then((m) => ({ default: m.PDFToPNGTool }))
 );
+const FlattenPDFTool = lazy(() =>
+  import('@/tools/flatten-pdf').then((m) => ({ default: m.FlattenPDFTool }))
+);
+const CropPDFTool = lazy(() =>
+  import('@/tools/crop-pdf').then((m) => ({ default: m.CropPDFTool }))
+);
 
 const toolComponents: Record<string, React.LazyExoticComponent<React.ComponentType>> = {
   merge: MergePDFTool,
@@ -92,6 +103,8 @@ const toolComponents: Record<string, React.LazyExoticComponent<React.ComponentTy
   'edit-metadata': EditMetadataTool,
   'delete-pages': DeletePagesTool,
   'pdf-to-png': PDFToPNGTool,
+  'flatten': FlattenPDFTool,
+  'crop-pdf': CropPDFTool,
 };
 
 function ToolLoader() {
@@ -107,15 +120,39 @@ function ToolLoader() {
 
 // ─── Header ────────────────────────────────────────────────────────────────────
 
+// Shared state for category filtering and search
+const CategoryFilterContext = React.createContext<{
+  selectedCategory: string | null;
+  setSelectedCategory: (cat: string | null) => void;
+  searchOpen: boolean;
+  setSearchOpen: (open: boolean) => void;
+}>({
+  selectedCategory: null,
+  setSelectedCategory: () => {},
+  searchOpen: false,
+  setSearchOpen: () => {},
+});
+
 function Header() {
   const { currentPage, goHome } = useNavStore();
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
+  const { selectedCategory, setSelectedCategory, setSearchOpen } = React.useContext(CategoryFilterContext);
+
+  const handleCategoryClick = (catId: string) => {
+    if (selectedCategory === catId) {
+      setSelectedCategory(null); // toggle off
+    } else {
+      setSelectedCategory(catId);
+    }
+    goHome();
+    setMobileMenuOpen(false);
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md shadow-sm">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
         <button
-          onClick={goHome}
+          onClick={() => { goHome(); setSelectedCategory(null); }}
           className="flex items-center gap-2.5 hover:opacity-80 transition-opacity"
         >
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-red-500 to-orange-500">
@@ -132,15 +169,29 @@ function Header() {
         </button>
 
         <nav className="hidden md:flex items-center gap-1">
+          {/* Search button */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 gap-2 text-muted-foreground border-dashed"
+            onClick={() => setSearchOpen(true)}
+          >
+            <Search className="h-3.5 w-3.5" />
+            <span className="text-xs">Search...</span>
+            <kbd className="pointer-events-none ml-1 inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+              <span className="text-xs">⌘</span>K
+            </kbd>
+          </Button>
+          <div className="w-px h-5 bg-border mx-1" />
           <ThemeToggle />
           <div className="w-px h-5 bg-border mx-1" />
           {categories.map((cat) => (
             <Button
               key={cat.id}
-              variant="ghost"
+              variant={selectedCategory === cat.id ? 'default' : 'ghost'}
               size="sm"
-              className="text-muted-foreground hover:text-foreground"
-              onClick={goHome}
+              className={selectedCategory === cat.id ? '' : 'text-muted-foreground hover:text-foreground'}
+              onClick={() => handleCategoryClick(cat.id)}
             >
               {cat.name}
             </Button>
@@ -148,6 +199,14 @@ function Header() {
         </nav>
 
         <div className="flex items-center gap-1 md:hidden">
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setSearchOpen(true)}
+          >
+            <Search className="h-3.5 w-3.5" />
+          </Button>
           <ThemeToggle />
           <Button
             variant="ghost"
@@ -170,17 +229,25 @@ function Header() {
             {categories.map((cat) => (
               <Button
                 key={cat.id}
+                variant={selectedCategory === cat.id ? 'default' : 'ghost'}
+                size="sm"
+                className={`w-full justify-start ${selectedCategory === cat.id ? '' : 'text-muted-foreground'}`}
+                onClick={() => handleCategoryClick(cat.id)}
+              >
+                {cat.name}
+                {selectedCategory === cat.id && ' ✓'}
+              </Button>
+            ))}
+            {selectedCategory && (
+              <Button
                 variant="ghost"
                 size="sm"
                 className="w-full justify-start text-muted-foreground"
-                onClick={() => {
-                  goHome();
-                  setMobileMenuOpen(false);
-                }}
+                onClick={() => { setSelectedCategory(null); setMobileMenuOpen(false); }}
               >
-                {cat.name}
+                Show All Tools
               </Button>
-            ))}
+            )}
           </div>
         </div>
       )}
@@ -308,7 +375,446 @@ function FooterLink({ id, children }: { id: string; children: React.ReactNode })
   );
 }
 
-// ─── Hero Section ──────────────────────────────────────────────────────────────
+// ─── How It Works Section ─────────────────────────────────────────────────────
+
+function HowItWorksSection() {
+  const [isVisible, setIsVisible] = useState(false);
+  const sectionRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+        }
+      },
+      { threshold: 0.2 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  const steps = [
+    {
+      number: 1,
+      title: 'Upload Your PDF',
+      description: 'Drag & drop or click to upload your file. We support PDF, JPG, and PNG formats.',
+      icon: Upload,
+    },
+    {
+      number: 2,
+      title: 'Choose Your Tool',
+      description: 'Select from 15+ tools: merge, split, compress, rotate, watermark, and more.',
+      icon: Wrench,
+    },
+    {
+      number: 3,
+      title: 'Download Result',
+      description: 'Your processed file is ready instantly. Download with one click.',
+      icon: Download,
+    },
+  ];
+
+  return (
+    <section ref={sectionRef} className="mx-auto max-w-6xl px-4 sm:px-6 pb-16">
+      <div className="text-center mb-10">
+        <h2 className="text-2xl font-bold">How It Works</h2>
+        <p className="text-muted-foreground mt-2">Three simple steps to process your PDFs</p>
+      </div>
+
+      <div className="relative flex flex-col sm:flex-row items-stretch justify-center gap-8 sm:gap-0">
+        {steps.map((step, index) => {
+          const Icon = step.icon;
+          return (
+            <React.Fragment key={step.number}>
+              {/* Connecting dotted line between steps (visible on sm+) */}
+              {index > 0 && (
+                <div className="hidden sm:flex items-center absolute top-1/2 -translate-y-1/2 z-0" style={{ left: `${(index * 50) + 8}%`, width: '34%' }}>
+                  <div className="w-full border-t-2 border-dashed border-red-300 dark:border-red-700/50" />
+                </div>
+              )}
+              <div
+                className={`relative z-10 flex-1 flex flex-col items-center text-center px-4 transition-all duration-700 ${
+                  isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
+                }`}
+                style={{ transitionDelay: `${index * 150}ms` }}
+              >
+                {/* Gradient number circle */}
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-red-500 to-orange-500 text-white text-2xl font-bold shadow-lg shadow-red-500/20 mb-4">
+                  {step.number}
+                </div>
+                {/* Icon below the number */}
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted/50 dark:bg-muted/30 mb-3">
+                  <Icon className="h-5 w-5 text-red-500 dark:text-orange-400" />
+                </div>
+                <h3 className="font-semibold text-base mb-1.5">{step.title}</h3>
+                <p className="text-sm text-muted-foreground max-w-[240px]">{step.description}</p>
+              </div>
+            </React.Fragment>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+// ─── Stats Section ────────────────────────────────────────────────────────────
+
+function StatItem({ target, suffix, label, startAnimating }: {
+  target: number;
+  suffix: string;
+  label: string;
+  startAnimating: boolean;
+}) {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    if (!startAnimating) return;
+    const duration = 1500;
+    let startTime: number;
+    let animationFrame: number;
+    const animate = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const progress = Math.min((timestamp - startTime) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setCount(Math.floor(eased * target));
+      if (progress < 1) {
+        animationFrame = requestAnimationFrame(animate);
+      }
+    };
+    animationFrame = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animationFrame);
+  }, [startAnimating, target]);
+
+  return (
+    <div className="text-center flex-1">
+      <div className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent">
+        {count}{suffix}
+      </div>
+      <div className="text-sm text-muted-foreground mt-1">{label}</div>
+    </div>
+  );
+}
+
+function StatsSection() {
+  const [isVisible, setIsVisible] = useState(false);
+  const sectionRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+        }
+      },
+      { threshold: 0.3 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  const statDefs = [
+    { target: 15, suffix: '+', label: 'PDF Tools' },
+    { target: 100, suffix: '%', label: 'Free Forever' },
+    { target: 0, suffix: '', label: 'Data Uploads' },
+    { target: 50, suffix: 'K+', label: 'Happy Users' },
+  ];
+
+  return (
+    <section ref={sectionRef} className="mx-auto max-w-6xl px-4 sm:px-6 pb-16">
+      <div className="rounded-2xl border bg-card p-6 sm:p-8 shadow-sm">
+        <div className="flex flex-col sm:flex-row items-center justify-around gap-6 sm:gap-0">
+          {statDefs.map((stat, index) => (
+            <React.Fragment key={stat.label}>
+              <StatItem
+                target={stat.target}
+                suffix={stat.suffix}
+                label={stat.label}
+                startAnimating={isVisible}
+              />
+              {index < statDefs.length - 1 && (
+                <div className="hidden sm:block h-8 w-px bg-border shrink-0" />
+              )}
+              {index < statDefs.length - 1 && index === 1 && (
+                <div className="sm:hidden h-px w-16 bg-border" />
+              )}
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ─── Testimonials Section ────────────────────────────────────────────────────
+
+function TestimonialsSection() {
+  const [isVisible, setIsVisible] = useState(false);
+  const sectionRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+        }
+      },
+      { threshold: 0.1 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  const testimonials = [
+    {
+      name: 'Alex M.',
+      role: 'Freelance Designer',
+      quote: 'PDF Tools saved me hours of work. The merge and compress features are incredibly fast and easy to use. No more desktop software needed!',
+      initials: 'AM',
+      avatarBg: 'bg-gradient-to-br from-red-500 to-orange-500',
+    },
+    {
+      name: 'Sarah K.',
+      role: 'Marketing Manager',
+      quote: "I love that everything runs in the browser. No uploads, no privacy concerns. It's exactly what our team needed for quick document processing.",
+      initials: 'SK',
+      avatarBg: 'bg-gradient-to-br from-purple-500 to-pink-500',
+    },
+    {
+      name: 'David R.',
+      role: 'Software Developer',
+      quote: 'Clean, fast, and reliable. The watermark and page number tools are surprisingly powerful for a free browser-based app. Highly recommended.',
+      initials: 'DR',
+      avatarBg: 'bg-gradient-to-br from-emerald-500 to-teal-500',
+    },
+  ];
+
+  return (
+    <section ref={sectionRef} className="mx-auto max-w-6xl px-4 sm:px-6 pb-16">
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-bold">Trusted by Thousands</h2>
+        <p className="text-muted-foreground mt-2">See what our users say about PDF Tools</p>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        {testimonials.map((testimonial, index) => (
+          <div
+            key={testimonial.name}
+            className={`rounded-xl border bg-card p-6 shadow-sm transition-all duration-700 ${
+              isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
+            }`}
+            style={{ transitionDelay: `${index * 150}ms` }}
+          >
+            {/* Star rating */}
+            <div className="flex gap-0.5 mb-3">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Star key={i} className="h-4 w-4 fill-amber-400 text-amber-400" />
+              ))}
+            </div>
+
+            {/* Quote */}
+            <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+              &ldquo;{testimonial.quote}&rdquo;
+            </p>
+
+            {/* User info */}
+            <div className="flex items-center gap-3">
+              <div className={`flex h-9 w-9 items-center justify-center rounded-full ${testimonial.avatarBg} text-white text-xs font-bold shrink-0`}>
+                {testimonial.initials}
+              </div>
+              <div>
+                <div className="text-sm font-semibold">{testimonial.name}</div>
+                <div className="text-xs text-muted-foreground">{testimonial.role}</div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+// ─── Keyboard Shortcuts ───────────────────────────────────────────────────────
+
+// ─── Search Dialog ────────────────────────────────────────────────────────────
+
+function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { navigate } = useNavStore();
+  const [query, setQuery] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [prevOpen, setPrevOpen] = useState(false);
+
+  const filteredTools = query.trim()
+    ? tools.filter((t) =>
+        t.name.toLowerCase().includes(query.toLowerCase()) ||
+        t.description.toLowerCase().includes(query.toLowerCase())
+      )
+    : tools;
+
+  // Reset state when dialog opens (derived from open prop change)
+  if (open && !prevOpen) {
+    setPrevOpen(true);
+    setQuery('');
+    setSelectedIndex(0);
+  }
+  if (!open && prevOpen) {
+    setPrevOpen(false);
+  }
+
+  // Focus input when dialog opens
+  useEffect(() => {
+    if (open) {
+      const timer = setTimeout(() => inputRef.current?.focus(), 100);
+      return () => clearTimeout(timer);
+    }
+  }, [open]);
+
+  // Derive selectedIndex reset from query change
+  const effectiveSelectedIndex = Math.min(selectedIndex, Math.max(filteredTools.length - 1, 0));
+
+  const handleSelect = (toolId: string) => {
+    navigate(toolId as Parameters<typeof navigate>[0]);
+    onClose();
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setSelectedIndex((prev) => Math.min(prev + 1, filteredTools.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setSelectedIndex((prev) => Math.max(prev - 1, 0));
+    } else if (e.key === 'Enter' && filteredTools[effectiveSelectedIndex]) {
+      handleSelect(filteredTools[effectiveSelectedIndex].id);
+    }
+  };
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100]" role="dialog" aria-modal="true">
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm animate-in fade-in duration-150"
+        onClick={onClose}
+      />
+
+      {/* Dialog */}
+      <div className="fixed left-1/2 top-[20%] -translate-x-1/2 z-[101] w-full max-w-lg">
+        <div className="mx-4 rounded-xl border bg-card shadow-2xl animate-in fade-in slide-in-from-top-4 duration-200 overflow-hidden">
+          {/* Search input */}
+          <div className="flex items-center gap-3 border-b px-4 py-3">
+            <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+            <input
+              ref={inputRef}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Search tools... (e.g., merge, compress, watermark)"
+              className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+            />
+            <kbd className="hidden sm:inline-flex pointer-events-none h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+              ESC
+            </kbd>
+          </div>
+
+          {/* Results */}
+          <div className="max-h-80 overflow-y-auto p-2">
+            {filteredTools.length === 0 ? (
+              <div className="py-8 text-center text-sm text-muted-foreground">
+                No tools found for &ldquo;{query}&rdquo;
+              </div>
+            ) : (
+              filteredTools.map((tool, index) => {
+                const Icon = tool.icon;
+                return (
+                  <button
+                    key={tool.id}
+                    onClick={() => handleSelect(tool.id)}
+                    className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors duration-100 ${
+                      index === effectiveSelectedIndex
+                        ? 'bg-primary/10 text-foreground'
+                        : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+                    }`}
+                  >
+                    <div className={`p-1.5 rounded-lg ${tool.bgColor} shrink-0`}>
+                      <Icon className={`h-4 w-4 ${tool.color}`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium">{tool.name}</div>
+                      <div className="text-xs text-muted-foreground truncate">{tool.description}</div>
+                    </div>
+                    {index === effectiveSelectedIndex && (
+                      <ArrowRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    )}
+                  </button>
+                );
+              })
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="border-t px-4 py-2 flex items-center gap-4 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <kbd className="rounded border bg-muted px-1 font-mono text-[10px]">↑↓</kbd> Navigate
+            </span>
+            <span className="flex items-center gap-1">
+              <kbd className="rounded border bg-muted px-1 font-mono text-[10px]">↵</kbd> Select
+            </span>
+            <span className="flex items-center gap-1">
+              <kbd className="rounded border bg-muted px-1 font-mono text-[10px]">esc</kbd> Close
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function KeyboardShortcuts() {
+  const { goHome } = useNavStore();
+  const { setSearchOpen } = React.useContext(CategoryFilterContext);
+
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      // Escape → go home or close search
+      if (e.key === 'Escape') {
+        goHome();
+      }
+      // Ctrl/Cmd+K → open search
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    },
+    [goHome, setSearchOpen]
+  );
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown]);
+
+  return (
+    <>
+      {/* Keyboard shortcut hint badge (desktop only) */}
+      <div className="fixed bottom-4 left-4 z-40 hidden md:flex items-center gap-2 rounded-full border bg-muted/50 px-3 py-1.5 text-xs text-muted-foreground backdrop-blur-sm">
+        <kbd className="font-mono text-[11px]">⌘K</kbd>
+        <span>Search</span>
+        <span className="text-border">·</span>
+        <kbd className="font-mono text-[11px]">Esc</kbd>
+        <span>Home</span>
+      </div>
+    </>
+  );
+}
 
 function HeroSection() {
   const { navigate } = useNavStore();
@@ -421,10 +927,31 @@ function HeroSection() {
 
 function ToolsGrid() {
   const { navigate } = useNavStore();
+  const { selectedCategory, setSelectedCategory } = React.useContext(CategoryFilterContext);
+
+  const activeCategories = selectedCategory
+    ? categories.filter((c) => c.id === selectedCategory)
+    : categories;
 
   return (
     <section id="tools-grid" className="mx-auto max-w-6xl px-4 sm:px-6 pb-16">
-      {categories.map((category) => {
+      {/* Active filter indicator */}
+      {selectedCategory && (
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-sm text-muted-foreground">Showing:</span>
+          <Badge variant="secondary" className="gap-1">
+            {categories.find((c) => c.id === selectedCategory)?.name}
+            <button
+              onClick={() => setSelectedCategory(null)}
+              className="ml-1 hover:text-destructive transition-colors"
+              aria-label="Clear filter"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </Badge>
+        </div>
+      )}
+      {activeCategories.map((category) => {
         const categoryTools = tools.filter((t) => t.category === category.id);
         if (categoryTools.length === 0) return null;
 
@@ -499,6 +1026,7 @@ function HomePage() {
   return (
     <>
       <HeroSection />
+      <HowItWorksSection />
       <RecentHistory />
       <ToolsGrid />
 
@@ -548,6 +1076,9 @@ function HomePage() {
           </div>
         </div>
       </section>
+
+      <StatsSection />
+      <TestimonialsSection />
     </>
   );
 }
@@ -590,15 +1121,22 @@ function ToolPageRouter() {
 // ─── Main App ──────────────────────────────────────────────────────────────────
 
 export default function Home() {
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <main className="flex-1">
-        <ErrorBoundary>
-          <ToolPageRouter />
-        </ErrorBoundary>
-      </main>
-      <Footer />
-    </div>
+    <CategoryFilterContext.Provider value={{ selectedCategory, setSelectedCategory, searchOpen, setSearchOpen }}>
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1">
+          <ErrorBoundary>
+            <ToolPageRouter />
+          </ErrorBoundary>
+        </main>
+        <Footer />
+        <KeyboardShortcuts />
+        <SearchDialog open={searchOpen} onClose={() => setSearchOpen(false)} />
+      </div>
+    </CategoryFilterContext.Provider>
   );
 }

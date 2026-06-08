@@ -15,7 +15,9 @@ export type ToolId =
   | 'extract-pages'
   | 'edit-metadata'
   | 'delete-pages'
-  | 'pdf-to-png';
+  | 'pdf-to-png'
+  | 'flatten'
+  | 'crop-pdf';
 
 interface NavStore {
   currentPage: 'home' | ToolId;

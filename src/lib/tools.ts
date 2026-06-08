@@ -1,7 +1,8 @@
 import { 
   Merge, Scissors, Minimize2, RotateCw, 
   FileImage, ImagePlus, Droplets, Lock, 
-  LayoutList, FileText, Hash, Settings, Trash2
+  LayoutList, FileText, Hash, Settings, Trash2,
+  Layers, Crop
 } from 'lucide-react';
 import React from 'react';
 
@@ -150,6 +151,24 @@ export const tools: ToolDefinition[] = [
     color: 'text-lime-600 dark:text-lime-400',
     bgColor: 'bg-lime-50 hover:bg-lime-100 dark:bg-lime-950/30 dark:hover:bg-lime-950/50',
     category: 'convert',
+  },
+  {
+    id: 'flatten',
+    name: 'Flatten PDF',
+    description: 'Flatten form fields and annotations into page content',
+    icon: Layers,
+    color: 'text-slate-600 dark:text-slate-400',
+    bgColor: 'bg-slate-50 hover:bg-slate-100 dark:bg-slate-950/30 dark:hover:bg-slate-950/50',
+    category: 'optimize',
+  },
+  {
+    id: 'crop-pdf',
+    name: 'Crop PDF',
+    description: 'Crop PDF page margins and resize pages',
+    icon: Crop,
+    color: 'text-fuchsia-600 dark:text-fuchsia-400',
+    bgColor: 'bg-fuchsia-50 hover:bg-fuchsia-100 dark:bg-fuchsia-950/30 dark:hover:bg-fuchsia-950/50',
+    category: 'organize',
   },
 ];
 

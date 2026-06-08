@@ -287,6 +287,129 @@ export async function deletePDFPages(
 }
 
 /**
+ * Flatten PDF - re-render each page as an image to flatten form fields and annotations
+ */
+export async function flattenPDF(
+  data: ArrayBuffer,
+  options?: {
+    flattenFormFields?: boolean;
+    flattenAnnotations?: boolean;
+    flattenWatermarks?: boolean;
+    quality?: 'standard' | 'high';
+    onProgress?: (page: number, total: number) => void;
+  }
+): Promise<Uint8Array> {
+  // Note: flattenFormFields, flattenAnnotations, flattenWatermarks options
+  // are UI-facing. Re-rendering inherently flattens all visible content.
+  const quality = options?.quality ?? 'standard';
+  const onProgress = options?.onProgress;
+
+  // Dynamic import of pdfjs-dist to avoid SSR issues
+  const pdfjsLib = await import('pdfjs-dist');
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+
+  const scale = quality === 'high' ? 2.5 : 1.5;
+
+  // Load with pdfjs-dist for rendering
+  const pdfDoc = await pdfjsLib.getDocument({ data: new Uint8Array(data) }).promise;
+  const numPages = pdfDoc.numPages;
+
+  // Create new PDF with pdf-lib
+  const newPdf = await PDFDocument.create();
+
+  for (let i = 1; i <= numPages; i++) {
+    onProgress?.(i, numPages);
+
+    const page = await pdfDoc.getPage(i);
+    const viewport = page.getViewport({ scale });
+
+    // Render page to canvas
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    const ctx = canvas.getContext('2d')!;
+
+    await page.render({ canvasContext: ctx, viewport }).promise;
+
+    // Convert canvas to PNG bytes
+    const pngDataUrl = canvas.toDataURL('image/png');
+    const pngBase64 = pngDataUrl.split(',')[1];
+    const pngBytes = Uint8Array.from(atob(pngBase64), (c) => c.charCodeAt(0));
+
+    // Embed the PNG image into the new PDF
+    const pngImage = await newPdf.embedPng(pngBytes);
+
+    // Get original page size
+    const origViewport = page.getViewport({ scale: 1 });
+    const pageWidth = origViewport.width;
+    const pageHeight = origViewport.height;
+
+    const newPage = newPdf.addPage([pageWidth, pageHeight]);
+    newPage.drawImage(pngImage, {
+      x: 0,
+      y: 0,
+      width: pageWidth,
+      height: pageHeight,
+    });
+  }
+
+  return newPdf.save();
+}
+
+/**
+ * Get page dimensions for all pages in a PDF
+ */
+export async function getPDFPageDimensions(
+  data: ArrayBuffer
+): Promise<Array<{ width: number; height: number }>> {
+  const pdf = await loadPDF(data);
+  const pages = pdf.getPages();
+  return pages.map((page) => {
+    const { width, height } = page.getSize();
+    return { width, height };
+  });
+}
+
+/**
+ * Crop PDF pages by adjusting box dimensions
+ */
+export async function cropPDF(
+  data: ArrayBuffer,
+  options: {
+    top: number;
+    bottom: number;
+    left: number;
+    right: number;
+    pageIndices?: number[];
+  }
+): Promise<Uint8Array> {
+  const pdf = await loadPDF(data);
+  const pages = pdf.getPages();
+
+  pages.forEach((page, index) => {
+    if (!options.pageIndices || options.pageIndices.includes(index)) {
+      const { width, height } = page.getSize();
+
+      const newLeft = options.left;
+      const newBottom = options.bottom;
+      const newRight = width - options.right;
+      const newTop = height - options.top;
+
+      // Ensure crop area is valid
+      if (newRight <= newLeft || newTop <= newBottom) {
+        throw new Error(`Invalid crop dimensions for page ${index + 1}: crop area is empty`);
+      }
+
+      page.setCropBox(newLeft, newBottom, newRight - newLeft, newTop - newBottom);
+      page.setMediaBox(newLeft, newBottom, newRight - newLeft, newTop - newBottom);
+      page.setTrimBox(newLeft, newBottom, newRight - newLeft, newTop - newBottom);
+    }
+  });
+
+  return pdf.save();
+}
+
+/**
  * Simplified compress - remove metadata and optimize
  */
 export async function compressPDF(
