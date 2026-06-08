@@ -1,5 +1,23 @@
 import React from 'react';
-import { Lock, Zap, BadgeCheck } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { 
+  Lock, Zap, BadgeCheck, GitMerge, Scissors, 
+  PackageOpen, RotateCw, Image as ImageIcon, FileImage, 
+  Stamp, LayoutGrid, FileText 
+} from 'lucide-react';
+
+const tools = [
+  { name: 'Merge PDF', desc: 'Combine multiple PDFs into one unified document.', route: '/merge', icon: GitMerge, color: 'text-red-500', bg: 'bg-red-50' },
+  { name: 'Split PDF', desc: 'Extract pages from your PDF or save each page as a separate PDF.', route: '/split', icon: Scissors, color: 'text-orange-500', bg: 'bg-orange-50' },
+  { name: 'Compress PDF', desc: 'Reduce PDF file size while maintaining visual quality.', route: '/compress', icon: PackageOpen, color: 'text-blue-500', bg: 'bg-blue-50' },
+  { name: 'Rotate PDF', desc: 'Rotate your PDFs the way you need them. You can even rotate multiple PDFs at once!', route: '/rotate', icon: RotateCw, color: 'text-purple-500', bg: 'bg-purple-50' },
+  { name: 'PDF to JPG', desc: 'Convert each PDF page into a JPG or extract all images contained in a PDF.', route: '/pdf-to-jpg', icon: ImageIcon, color: 'text-green-500', bg: 'bg-green-50' },
+  { name: 'JPG to PDF', desc: 'Convert JPG images to PDF in seconds. Easily adjust orientation and margins.', route: '/jpg-to-pdf', icon: FileImage, color: 'text-amber-500', bg: 'bg-amber-50' },
+  { name: 'Watermark PDF', desc: 'Stamp an image or text over your PDF in seconds.', route: '/watermark', icon: Stamp, color: 'text-pink-500', bg: 'bg-pink-50' },
+  { name: 'Protect PDF', desc: 'Encrypt your PDF with a password to keep sensitive data confidential.', route: '/protect', icon: Lock, color: 'text-gray-700', bg: 'bg-gray-100' },
+  { name: 'Organize PDF', desc: 'Sort, add and delete PDF pages. Drag and drop the page thumbnails.', route: '/organize', icon: LayoutGrid, color: 'text-teal-500', bg: 'bg-teal-50' },
+  { name: 'PDF to Text', desc: 'Extract text from your PDF document into a simple TXT file.', route: '/pdf-to-text', icon: FileText, color: 'text-indigo-500', bg: 'bg-indigo-50' },
+];
 
 export default function Home() {
   const handleScrollToTools = (e) => {
@@ -13,7 +31,7 @@ export default function Home() {
   return (
     <div className="w-full">
       {/* Hero Section */}
-      <section className="w-full bg-surface py-16 px-4">
+      <section className="w-full bg-surface py-16 px-4 border-b border-muted/10">
         <div className="max-w-4xl mx-auto text-center flex flex-col items-center">
           
           <h1 className="text-3xl md:text-5xl font-bold text-text mb-6">
@@ -28,7 +46,7 @@ export default function Home() {
             <a
               href="#tools"
               onClick={handleScrollToTools}
-              className="flex-1 bg-primary hover:bg-primary/90 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center"
+              className="flex-1 bg-primary hover:bg-primary/90 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center shadow-sm"
             >
               Try All Tools
             </a>
@@ -58,10 +76,32 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Tools Section Placeholder (to be built next) */}
-      <section id="tools" className="py-16 px-4 min-h-[400px]">
-        <div className="max-w-7xl mx-auto text-center">
-          <p className="text-muted">Tools grid will go here...</p>
+      {/* Tools Section */}
+      <section id="tools" className="w-full bg-white py-16 px-4">
+        <div className="max-w-7xl mx-auto">
+          <h2 className="text-2xl font-bold text-center text-text mb-10">All PDF Tools</h2>
+          
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {tools.map((tool, idx) => {
+              const Icon = tool.icon;
+              return (
+                <Link
+                  key={idx}
+                  to={tool.route}
+                  className="bg-white border border-muted/10 rounded-xl p-6 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-200 flex flex-col items-center text-center group"
+                >
+                  <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-5 transition-transform group-hover:scale-110 duration-200 ${tool.bg} ${tool.color}`}>
+                    <Icon className="w-8 h-8" />
+                  </div>
+                  <h3 className="text-lg font-bold text-text mb-2">{tool.name}</h3>
+                  <p className="text-sm text-muted line-clamp-2 leading-relaxed">
+                    {tool.desc}
+                  </p>
+                </Link>
+              );
+            })}
+          </div>
+          
         </div>
       </section>
     </div>
