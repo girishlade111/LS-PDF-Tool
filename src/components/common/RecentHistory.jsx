@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Clock, Ghost, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { getHistory, clearHistory } from '@/lib/indexeddb';
+import { getHistory, clearHistory } from '@/utils/indexedDBUtils';
 import { getToolById } from '@/lib/tools';
 import { formatFileSize } from '@/lib/pdf-utils';
 import { getRelativeTime } from '@/utils/timeUtils';

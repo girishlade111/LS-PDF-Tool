@@ -69,7 +69,7 @@ export async function deleteFile(id: string): Promise<void> {
 export async function addHistory(entry: OperationHistory): Promise<void> {
   const db = await getDB();
   await db.put(STORES.HISTORY, entry);
-  // Keep only last 50 entries
+  // Keep only last 5 entries
   const tx = db.transaction(STORES.HISTORY, 'readwrite');
   const store = tx.objectStore(STORES.HISTORY);
   const index = store.index('createdAt');
@@ -78,7 +78,7 @@ export async function addHistory(entry: OperationHistory): Promise<void> {
   const toDelete: string[] = [];
   while (cursor) {
     count++;
-    if (count > 50) {
+    if (count > 5) {
       toDelete.push(cursor.value.id);
     }
     cursor = await cursor.continue();
