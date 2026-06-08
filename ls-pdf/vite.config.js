@@ -11,10 +11,12 @@ export default defineConfig({
     chunkSizeWarningLimit: 1500,
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor-pdflib': ['pdf-lib'],
-          'vendor-pdfjs': ['pdfjs-dist'],
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+        manualChunks(id) {
+          if (id.includes('pdf-lib')) return 'vendor-pdflib'
+          if (id.includes('pdfjs-dist')) return 'vendor-pdfjs'
+          if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
+            return 'vendor-react'
+          }
         },
       },
     },
