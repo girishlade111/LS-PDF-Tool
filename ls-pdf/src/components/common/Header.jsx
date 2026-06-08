@@ -1,76 +1,70 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FileText, Menu, X } from 'lucide-react';
 
 export default function Header() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-muted/20 shadow-sm">
+    <header className="fixed top-0 left-0 right-0 bg-white shadow-sm z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          <Link to="/" className="flex items-center gap-2 text-primary font-bold text-xl" aria-label="LS PDF Home">
-            <FileText size={24} className="text-primary" aria-hidden="true" />
-            <span>LS PDF</span>
+        <div className="flex justify-between items-center h-16">
+          {/* Logo */}
+          <Link to="/" className="flex items-center gap-2" onClick={() => setIsOpen(false)}>
+            <FileText className="h-8 w-8 text-primary" />
+            <span className="text-xl font-bold text-primary">LS PDF</span>
           </Link>
 
-          <nav className="hidden md:flex items-center gap-8" role="navigation" aria-label="Main navigation">
-            <Link to="/" className="text-sm font-medium text-text hover:text-primary transition-colors">
+          {/* Desktop Nav */}
+          <nav className="hidden md:flex items-center gap-6">
+            <Link to="/" className="text-text hover:text-primary font-medium transition-colors">
               Home
             </Link>
-            <Link to="/#tools" className="text-sm font-medium text-text hover:text-primary transition-colors">
+            <a href="/#tools" className="text-text hover:text-primary font-medium transition-colors">
               All Tools
-            </Link>
-          </nav>
-
-          <div className="flex items-center gap-4">
-            <span className="hidden sm:inline-flex items-center px-3 py-1 text-xs font-semibold text-green-700 bg-green-50 rounded-full">
+            </a>
+            <span className="bg-[#22C55E]/10 text-[#22C55E] text-xs font-bold px-3 py-1.5 rounded-full">
               Free & No Login Required
             </span>
+          </nav>
 
-            <button
-              className="md:hidden p-2 rounded-lg text-text hover:bg-muted/10 transition-colors"
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              aria-expanded={isMenuOpen}
-              aria-controls="mobile-menu"
-              aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
+          {/* Mobile Menu Button */}
+          <button 
+            className="md:hidden p-2 text-text hover:text-primary transition-colors"
+            onClick={() => setIsOpen(!isOpen)}
+            aria-label="Toggle menu"
+          >
+            {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile Nav */}
+      {isOpen && (
+        <div className="md:hidden border-t border-muted/20 bg-white">
+          <div className="px-4 pt-2 pb-4 space-y-1 flex flex-col shadow-lg">
+            <Link 
+              to="/" 
+              className="block px-3 py-3 text-text hover:bg-surface rounded-md font-medium" 
+              onClick={() => setIsOpen(false)}
             >
-              {isMenuOpen ? <X size={24} aria-hidden="true" /> : <Menu size={24} aria-hidden="true" />}
-            </button>
+              Home
+            </Link>
+            <a 
+              href="/#tools" 
+              className="block px-3 py-3 text-text hover:bg-surface rounded-md font-medium" 
+              onClick={() => setIsOpen(false)}
+            >
+              All Tools
+            </a>
+            <div className="px-3 pt-3 pb-1">
+              <span className="inline-block bg-[#22C55E]/10 text-[#22C55E] text-xs font-bold px-3 py-1.5 rounded-full">
+                Free & No Login Required
+              </span>
+            </div>
           </div>
         </div>
-
-        {isMenuOpen && (
-          <div id="mobile-menu" className="md:hidden py-4 border-t border-muted/20 animate-slide-down">
-            <nav className="flex flex-col gap-2" role="navigation" aria-label="Mobile navigation">
-              <Link
-                to="/"
-                className="px-3 py-2 text-sm font-medium text-text hover:text-primary hover:bg-primary/5 rounded-lg transition-colors"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Home
-              </Link>
-              <Link
-                to="/#tools"
-                className="px-3 py-2 text-sm font-medium text-text hover:text-primary hover:bg-primary/5 rounded-lg transition-colors"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                All Tools
-              </Link>
-            </nav>
-          </div>
-        )}
-
-      </div>
-      <style jsx>{`
-        @keyframes slide-down {
-          from { opacity: 0; transform: translateY(-8px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-slide-down {
-          animation: slide-down 0.2s ease-out;
-        }
-      `}</style>
+      )}
     </header>
   );
 }
