@@ -1,20 +1,14 @@
-import { useCallback, useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, File as FileIcon, X, AlertCircle } from 'lucide-react';
+import { Upload, File as FileIcon, X } from 'lucide-react';
 
-function formatFileSize(bytes) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function truncateFileName(name, maxLength = 30) {
-  if (name.length <= maxLength) return name;
-  const ext = name.split('.').pop();
-  const base = name.slice(0, name.lastIndexOf('.'));
-  const truncatedBase = base.slice(0, maxLength - ext.length - 4);
-  return `${truncatedBase}...${ext}`;
-}
+const formatFileSize = (bytes) => {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+};
 
 export default function FileDropzone({
   accept = { 'application/pdf': ['.pdf'] },
@@ -23,126 +17,110 @@ export default function FileDropzone({
   onFilesAccepted,
   label = 'Drop PDF files here',
   sublabel = 'or click to browse',
+  value // optional external state
 }) {
-  const [acceptedFiles, setAcceptedFiles] = useState([]);
-  const [fileRejections, setFileRejections] = useState([]);
-  const [isDragActive, setIsDragActive] = useState(false);
+  const [internalFiles, setInternalFiles] = useState([]);
+  const [errorMessage, setErrorMessage] = useState('');
 
-  const onDrop = useCallback((accepted, rejections) => {
-    setAcceptedFiles(accepted);
-    setFileRejections(rejections);
-    if (accepted.length > 0) {
-      onFilesAccepted?.(accepted);
+  // Use controlled value if provided, else fall back to internal state
+  const files = value !== undefined ? value : internalFiles;
+
+  const onDrop = useCallback((acceptedFiles, fileRejections) => {
+    setErrorMessage('');
+
+    if (fileRejections.length > 0) {
+      const error = fileRejections[0].errors[0];
+      if (error.code === 'file-invalid-type') {
+        setErrorMessage('Invalid file type. Please upload accepted files.');
+      } else if (error.code === 'file-too-large') {
+        setErrorMessage(`File is too large. Max size is ${formatFileSize(maxSize)}.`);
+      } else {
+        setErrorMessage(error.message);
+      }
+      return;
     }
-  }, [onFilesAccepted]);
 
-  const { getRootProps, getInputProps, isDragReject } = useDropzone({
+    if (acceptedFiles.length > 0) {
+      const newFiles = multiple ? [...files, ...acceptedFiles] : acceptedFiles;
+      if (value === undefined) {
+        setInternalFiles(newFiles);
+      }
+      if (onFilesAccepted) {
+        onFilesAccepted(newFiles);
+      }
+    }
+  }, [files, multiple, maxSize, onFilesAccepted, value]);
+
+  const removeFile = (indexToRemove) => {
+    const newFiles = files.filter((_, index) => index !== indexToRemove);
+    if (value === undefined) {
+      setInternalFiles(newFiles);
+    }
+    if (onFilesAccepted) {
+      onFilesAccepted(newFiles);
+    }
+  };
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept,
     multiple,
-    maxSize,
-    noClick: false,
-    noKeyboard: false,
+    maxSize
   });
-
-  const handleRemoveFile = (index) => {
-    const newFiles = acceptedFiles.filter((_, i) => i !== index);
-    setAcceptedFiles(newFiles);
-    onFilesAccepted?.(newFiles);
-  };
-
-  const handleClearAll = () => {
-    setAcceptedFiles([]);
-    onFilesAccepted?.([]);
-  };
-
-  const isError = isDragReject || fileRejections.length > 0;
-  const borderColor = isError ? 'border-red-500' : isDragActive ? 'border-primary' : 'border-muted/30';
-  const bgColor = isDragActive ? 'bg-red-50' : 'bg-background';
 
   return (
     <div className="w-full">
       <div
         {...getRootProps()}
-        className={`relative rounded-xl border-2 border-dashed p-8 text-center transition-all duration-200 cursor-pointer ${borderColor} ${bgColor}`}
-        onDragEnter={() => setIsDragActive(true)}
-        onDragLeave={() => setIsDragActive(false)}
-        onDragOver={() => setIsDragActive(true)}
-        onDrop={() => setIsDragActive(false)}
+        className={`w-full p-8 border-2 border-dashed rounded-xl flex flex-col items-center justify-center cursor-pointer transition-colors ${
+          isDragActive
+            ? 'border-primary bg-[#FFF5F5]'
+            : 'border-muted/30 bg-surface hover:bg-muted/5'
+        }`}
       >
         <input {...getInputProps()} />
-        <div className="space-y-3">
-          <div className="mx-auto w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-            <Upload size={28} strokeWidth={1.5} aria-hidden="true" />
-          </div>
-          <div>
-            <p className="text-lg font-medium text-text">{label}</p>
-            <p className="text-sm text-muted mt-1">{sublabel}</p>
-            {!multiple && <p className="text-xs text-muted mt-2">Single file only</p>}
-          </div>
-        </div>
+        <Upload className="w-10 h-10 text-primary mb-4" />
+        <p className="text-lg font-semibold text-text text-center">{label}</p>
+        <p className="text-sm text-muted text-center mt-1">{sublabel}</p>
       </div>
 
-      {isError && (
-        <div className="mt-3 p-3 rounded-lg bg-red-50 border border-red-200 flex items-center gap-2 text-red-700 text-sm">
-          <AlertCircle size={18} aria-hidden="true" />
-          <span>
-            {fileRejections.length > 0
-              ? fileRejections.map((r, i) => (
-                  <span key={i} className="block">
-                    {r.file.name}: {r.errors.map(e => e.message).join(', ')}
-                  </span>
-                ))
-              : 'Invalid file type or size'}
-          </span>
-        </div>
+      {errorMessage && (
+        <p className="text-primary text-sm mt-3 text-center font-medium">
+          {errorMessage}
+        </p>
       )}
 
-      {acceptedFiles.length > 0 && (
-        <div className="mt-4 space-y-2">
-          {acceptedFiles.map((file, index) => (
+      {files.length > 0 && (
+        <div className="mt-4 flex flex-wrap gap-3">
+          {files.map((file, index) => (
             <div
-              key={`${file.name}-${file.lastModified}-${index}`}
-              className="flex items-center justify-between p-3 bg-surface border border-muted/20 rounded-lg animate-slide-in"
+              key={`${file.name}-${index}`}
+              className="flex items-center gap-2 bg-surface border border-muted/20 pl-3 pr-2 py-2 rounded-lg max-w-full shadow-sm"
             >
-              <div className="flex items-center gap-3 min-w-0 flex-1">
-                <FileIcon size={20} className="text-muted flex-shrink-0" aria-hidden="true" />
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-text truncate" title={file.name}>
-                    {truncateFileName(file.name)}
-                  </p>
-                  <p className="text-xs text-muted">{formatFileSize(file.size)}</p>
-                </div>
+              <FileIcon className="w-5 h-5 text-primary shrink-0" />
+              <div className="flex flex-col min-w-0 overflow-hidden">
+                <span className="text-sm font-medium text-text truncate max-w-[200px]">
+                  {file.name}
+                </span>
+                <span className="text-xs text-muted">
+                  {formatFileSize(file.size)}
+                </span>
               </div>
               <button
-                onClick={() => handleRemoveFile(index)}
-                className="p-1.5 rounded-lg text-muted hover:text-red-600 hover:bg-red-50 transition-colors flex-shrink-0"
-                aria-label={`Remove ${file.name}`}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeFile(index);
+                }}
+                className="p-1 hover:bg-muted/10 rounded-full transition-colors ml-1 shrink-0"
+                aria-label="Remove file"
               >
-                <X size={16} aria-hidden="true" />
+                <X className="w-4 h-4 text-muted hover:text-primary" />
               </button>
             </div>
           ))}
-          {multiple && acceptedFiles.length > 1 && (
-            <button
-              onClick={handleClearAll}
-              className="w-full text-sm text-muted hover:text-primary transition-colors p-2"
-            >
-              Clear all ({acceptedFiles.length})
-            </button>
-          )}
         </div>
       )}
-
-      <style jsx>{`
-        @keyframes slide-in {
-          from { opacity: 0; transform: translateY(-8px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-slide-in {
-          animation: slide-in 0.2s ease-out;
-        }
-      `}</style>
     </div>
   );
 }
