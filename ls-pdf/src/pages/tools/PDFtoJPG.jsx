@@ -1,0 +1,1 @@
+export default function PDFtoJPG() { return <div>Tool coming soon</div>; }

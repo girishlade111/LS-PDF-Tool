@@ -1,0 +1,1 @@
+export default function PDFtoText() { return <div>Tool coming soon</div>; }
