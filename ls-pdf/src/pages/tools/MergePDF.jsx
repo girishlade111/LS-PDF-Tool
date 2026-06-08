@@ -1,5 +1,4 @@
-import React from 'react';
-import { PDFDocument } from 'pdf-lib';
+import React, { useEffect } from 'react';
 import { GitMerge, ArrowUp, ArrowDown, X, GripVertical, File as FileIcon } from 'lucide-react';
 import ToolPageLayout from '../../components/common/ToolPageLayout';
 import FileDropzone from '../../components/common/FileDropzone';
@@ -7,6 +6,7 @@ import ProcessingStatus from '../../components/common/ProcessingStatus';
 import DownloadResult from '../../components/common/DownloadResult';
 import { useFileStore } from '../../context/FileStoreContext';
 import { addHistoryEntry } from '../../utils/indexedDBUtils';
+import usePDFWorker from '../../hooks/usePDFWorker';
 
 const formatFileSize = (bytes) => {
   if (bytes === 0) return '0 B';
@@ -19,6 +19,14 @@ const formatFileSize = (bytes) => {
 export default function MergePDF() {
   const { state, dispatch } = useFileStore();
   const { inputFiles, outputFile, outputFileName, status, progress, errorMessage } = state;
+  const { process: processWorker, progress: workerProgress, isProcessing } = usePDFWorker();
+
+  // Sync worker progress to global state
+  useEffect(() => {
+    if (isProcessing) {
+      dispatch({ type: 'SET_STATUS', payload: { status: 'processing', progress: workerProgress } });
+    }
+  }, [workerProgress, isProcessing, dispatch]);
 
   const handleFilesAccepted = (files) => {
     dispatch({ type: 'SET_INPUT_FILES', payload: files });
@@ -47,28 +55,15 @@ export default function MergePDF() {
     dispatch({ type: 'SET_ERROR', payload: '' });
 
     try {
-      const mergedPdf = await PDFDocument.create();
+      const arrayBuffers = await Promise.all(inputFiles.map(file => file.arrayBuffer()));
+      const mergedBytes = await processWorker('MERGE', { filesData: arrayBuffers });
 
-      for (let i = 0; i < inputFiles.length; i++) {
-        const file = inputFiles[i];
-        const arrayBuffer = await file.arrayBuffer();
-        const pdf = await PDFDocument.load(arrayBuffer);
-        const pages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
-        pages.forEach(page => mergedPdf.addPage(page));
-
-        // Update progress dynamically
-        const currentProgress = Math.round(((i + 1) / inputFiles.length) * 100);
-        dispatch({ type: 'SET_STATUS', payload: { status: 'processing', progress: currentProgress } });
-      }
-
-      const mergedBytes = await mergedPdf.save();
       const blob = new Blob([mergedBytes], { type: 'application/pdf' });
       const outName = 'merged.pdf';
       
       dispatch({ type: 'SET_OUTPUT', payload: { file: blob, fileName: outName } });
       dispatch({ type: 'SET_STATUS', payload: { status: 'done', progress: 100 } });
 
-      // Save operation history locally
       await addHistoryEntry({
         toolName: 'Merge PDF',
         fileName: inputFiles[0].name + (inputFiles.length > 1 ? ` + ${inputFiles.length - 1} more` : ''),

@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { PDFDocument } from 'pdf-lib';
+import React, { useState, useEffect } from 'react';
 import { PackageOpen, File as FileIcon, X, AlertCircle, Info } from 'lucide-react';
 import ToolPageLayout from '../../components/common/ToolPageLayout';
 import FileDropzone from '../../components/common/FileDropzone';
@@ -7,6 +6,7 @@ import ProcessingStatus from '../../components/common/ProcessingStatus';
 import DownloadResult from '../../components/common/DownloadResult';
 import { useFileStore } from '../../context/FileStoreContext';
 import { addHistoryEntry } from '../../utils/indexedDBUtils';
+import usePDFWorker from '../../hooks/usePDFWorker';
 
 const formatFileSize = (bytes) => {
   if (bytes === 0) return '0 B';
@@ -25,9 +25,17 @@ const COMPRESSION_OPTIONS = [
 export default function CompressPDF() {
   const { state, dispatch } = useFileStore();
   const { inputFiles, outputFile, outputFileName, status, progress, errorMessage } = state;
+  const { process: processWorker, progress: workerProgress, isProcessing } = usePDFWorker();
 
   const [compressionLevel, setCompressionLevel] = useState('medium');
   const [stats, setStats] = useState(null); // { original: number, compressed: number }
+
+  // Sync worker progress
+  useEffect(() => {
+    if (isProcessing) {
+      dispatch({ type: 'SET_STATUS', payload: { status: 'processing', progress: workerProgress } });
+    }
+  }, [workerProgress, isProcessing, dispatch]);
 
   const handleFilesAccepted = (files) => {
     if (files.length === 0) return;
@@ -52,38 +60,9 @@ export default function CompressPDF() {
       const originalSize = file.size;
       const arrayBuffer = await file.arrayBuffer();
 
-      dispatch({ type: 'SET_STATUS', payload: { status: 'processing', progress: 30 } });
-
-      // Note: pdf-lib does not natively support true image downsampling. 
-      // We configure save options based on the requested level to optimize as much as possible.
-      const pdfDoc = await PDFDocument.load(arrayBuffer, { 
-        updateMetadata: compressionLevel === 'high' ? false : true 
-      });
-
-      dispatch({ type: 'SET_STATUS', payload: { status: 'processing', progress: 60 } });
-
-      if (compressionLevel === 'high') {
-        pdfDoc.setTitle('');
-        pdfDoc.setAuthor('');
-        pdfDoc.setSubject('');
-        pdfDoc.setKeywords([]);
-        pdfDoc.setProducer('');
-        pdfDoc.setCreator('');
-      }
-
-      // useObjectStreams groups PDF objects into streams, which is a form of compression
-      const useObjectStreams = compressionLevel !== 'low';
-      
-      const compressedBytes = await pdfDoc.save({ 
-        useObjectStreams, 
-        addDefaultPage: false 
-      });
-
-      dispatch({ type: 'SET_STATUS', payload: { status: 'processing', progress: 90 } });
-
+      const compressedBytes = await processWorker('COMPRESS', { fileData: arrayBuffer, level: compressionLevel });
       const compressedSize = compressedBytes.length;
       
-      // If the compression algorithm somehow increased the file size, just use the original
       let finalBytes = compressedBytes;
       if (compressedSize >= originalSize) {
         finalBytes = arrayBuffer;
