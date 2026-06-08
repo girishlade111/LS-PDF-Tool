@@ -37,6 +37,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { useNavStore } from '@/store/nav-store';
+import Link from 'next/link';
 import { useFileStore } from '@/store/file-store';
 import { tools, categories, getToolById } from '@/lib/tools';
 import { Separator } from '@/components/ui/separator';
