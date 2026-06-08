@@ -39,3 +39,15 @@ for ($i = 0; $i -lt $lines.Length; $i++) {
             $newLines += "            <span className=""text-border"">|</span>"
             $newLines += "            <Link href=""/privacy"" className=""hover:text-foreground transition-colors"">Privacy</Link>"
             $newLines += "            <span className=""text-border"">|</span>"
+            $newLines += "            <Link href=""/disclaimer"" className=""hover:text-foreground transition-colors"">Disclaimer</Link>"
+            $newLines += "            <span className=""text-border"">|</span>"
+            $newLines += "            <Link href=""/contact"" className=""hover:text-foreground transition-colors"">Contact</Link>"
+            $newLines += "          </div>"
+            $inTargetBlock = $false
+            $blockStarted = $true
+        }
+    }
+}
+
+$newLines | Set-Content -Path $filePath
+Write-Host "Done. New file has $($newLines.Count) lines."
