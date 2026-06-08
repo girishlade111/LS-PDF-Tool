@@ -10,7 +10,9 @@ export type ToolId =
   | 'watermark'
   | 'protect'
   | 'organize'
-  | 'pdf-to-text';
+  | 'pdf-to-text'
+  | 'page-numbers'
+  | 'extract-pages';
 
 interface NavStore {
   currentPage: 'home' | ToolId;

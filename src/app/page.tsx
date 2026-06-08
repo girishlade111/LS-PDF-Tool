@@ -21,6 +21,7 @@ import { tools, categories, getToolById } from '@/lib/tools';
 import { Separator } from '@/components/ui/separator';
 import { ErrorBoundary } from '@/components/shared/error-boundary';
 import { RecentHistory } from '@/components/shared/recent-history';
+import { ThemeToggle } from '@/components/shared/theme-toggle';
 
 // Lazy load tool components
 const MergePDFTool = lazy(() =>
@@ -53,6 +54,12 @@ const OrganizePDFTool = lazy(() =>
 const PDFToTextTool = lazy(() =>
   import('@/tools/pdf-to-text').then((m) => ({ default: m.PDFToTextTool }))
 );
+const PageNumbersTool = lazy(() =>
+  import('@/tools/page-numbers').then((m) => ({ default: m.PageNumbersTool }))
+);
+const ExtractPagesTool = lazy(() =>
+  import('@/tools/extract-pages').then((m) => ({ default: m.ExtractPagesTool }))
+);
 
 const toolComponents: Record<string, React.LazyExoticComponent<React.ComponentType>> = {
   merge: MergePDFTool,
@@ -65,6 +72,8 @@ const toolComponents: Record<string, React.LazyExoticComponent<React.ComponentTy
   protect: ProtectPDFTool,
   organize: OrganizePDFTool,
   'pdf-to-text': PDFToTextTool,
+  'page-numbers': PageNumbersTool,
+  'extract-pages': ExtractPagesTool,
 };
 
 function ToolLoader() {
@@ -85,7 +94,7 @@ function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md">
+    <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md shadow-sm">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
         <button
           onClick={goHome}
@@ -105,6 +114,8 @@ function Header() {
         </button>
 
         <nav className="hidden md:flex items-center gap-1">
+          <ThemeToggle />
+          <div className="w-px h-5 bg-border mx-1" />
           {categories.map((cat) => (
             <Button
               key={cat.id}
@@ -118,18 +129,20 @@ function Header() {
           ))}
         </nav>
 
-        <Button
-          variant="ghost"
-          size="icon"
-          className="md:hidden"
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-        >
-          {mobileMenuOpen ? (
-            <X className="h-5 w-5" />
-          ) : (
-            <Menu className="h-5 w-5" />
-          )}
-        </Button>
+        <div className="flex items-center gap-1 md:hidden">
+          <ThemeToggle />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
+            {mobileMenuOpen ? (
+              <X className="h-5 w-5" />
+            ) : (
+              <Menu className="h-5 w-5" />
+            )}
+          </Button>
+        </div>
       </div>
 
       {/* Mobile menu */}

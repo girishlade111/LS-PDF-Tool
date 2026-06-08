@@ -1,7 +1,7 @@
 import { 
   Merge, Scissors, Minimize2, RotateCw, 
   FileImage, ImagePlus, Droplets, Lock, 
-  LayoutList, FileText 
+  LayoutList, FileText, Hash
 } from 'lucide-react';
 import React from 'react';
 
@@ -105,6 +105,24 @@ export const tools: ToolDefinition[] = [
     color: 'text-indigo-600',
     bgColor: 'bg-indigo-50 hover:bg-indigo-100',
     category: 'convert',
+  },
+  {
+    id: 'page-numbers',
+    name: 'Page Numbers',
+    description: 'Add page numbers to your PDF document',
+    icon: Hash,
+    color: 'text-violet-600',
+    bgColor: 'bg-violet-50 hover:bg-violet-100',
+    category: 'organize',
+  },
+  {
+    id: 'extract-pages',
+    name: 'Extract Pages',
+    description: 'Extract specific pages into a new PDF',
+    icon: Scissors,
+    color: 'text-rose-600',
+    bgColor: 'bg-rose-50 hover:bg-rose-100',
+    category: 'organize',
   },
 ];
 

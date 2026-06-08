@@ -38,37 +38,40 @@ export function ToolPage({
   const Icon = tool.icon;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-sm text-muted-foreground" aria-label="Breadcrumb">
         <Button
           variant="ghost"
           size="sm"
-          className="h-auto p-0 hover:bg-transparent text-muted-foreground hover:text-foreground"
+          className="h-auto p-0 hover:bg-transparent text-muted-foreground hover:text-foreground transition-colors"
           onClick={goHome}
         >
           <Home className="h-3.5 w-3.5 mr-1" />
           All Tools
         </Button>
-        <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50" aria-hidden="true" />
         <span className="text-foreground font-medium">{tool.name}</span>
       </nav>
 
-      {/* Header */}
-      <div className="flex items-start gap-4">
-        <div className={`p-3 rounded-xl ${tool.bgColor}`}>
-          <Icon className={`h-6 w-6 ${tool.color}`} />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold">{tool.name}</h1>
-          <p className="text-muted-foreground mt-1">{tool.description}</p>
+      {/* Header with decorative background */}
+      <div className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-card via-card to-muted/20 p-6">
+        <div className="absolute top-0 right-0 h-32 w-32 -translate-y-8 translate-x-8 rounded-full bg-gradient-to-br from-primary/5 to-transparent blur-2xl" />
+        <div className="relative flex items-start gap-4">
+          <div className={`p-3.5 rounded-2xl ${tool.bgColor} shadow-sm`}>
+            <Icon className={`h-7 w-7 ${tool.color}`} />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">{tool.name}</h1>
+            <p className="text-muted-foreground mt-1.5">{tool.description}</p>
+          </div>
         </div>
       </div>
 
       {/* Tool-specific options */}
       {children}
 
-      {/* File Drop Zone - show when no files or still adding */}
+      {/* File Drop Zone */}
       {(files.length === 0 || processingState === 'idle') && processingState !== 'success' && (
         <FileDropzone
           accept={accept}
@@ -82,7 +85,7 @@ export function ToolPage({
         <FileList />
       )}
 
-      {/* Action Button - always show when idle, but disabled if no files */}
+      {/* Action Button */}
       {processingState === 'idle' && (
         <div className={files.length === 0 ? 'opacity-40 pointer-events-none' : ''}>
           {actionButton}
