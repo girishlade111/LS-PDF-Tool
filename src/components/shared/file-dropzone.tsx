@@ -129,11 +129,19 @@ export function FileDropzone({
     e.target.value = '';
   };
 
+  // Build a helpful aria-label that describes the drop target.
+  const ariaLabelText = `${label}. ${description}. ${
+    multiple
+      ? `Up to ${maxFiles} files, ${maxSize / (1024 * 1024)}MB each.`
+      : `One file, up to ${maxSize / (1024 * 1024)}MB.`
+  } Press Enter or Space to browse.`;
+
   return (
     <div
       className={`
         relative overflow-hidden rounded-xl cursor-pointer
         transition-all duration-300 ease-in-out group
+        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background
         ${isDragging
           ? 'border-2 border-primary bg-gradient-to-br from-primary/10 via-primary/5 to-transparent scale-[1.01] shadow-lg shadow-primary/10'
           : 'border-2 border-dashed border-muted-foreground/25 hover:border-primary/60 hover:bg-muted/30'
@@ -146,7 +154,7 @@ export function FileDropzone({
       onClick={handleClick}
       role="button"
       tabIndex={0}
-      aria-label="Upload files"
+      aria-label={ariaLabelText}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
@@ -160,12 +168,14 @@ export function FileDropzone({
         accept={accept}
         multiple={multiple}
         onChange={handleFileChange}
-        className="hidden"
+        className="sr-only"
+        aria-hidden="true"
+        tabIndex={-1}
       />
 
       {/* Animated rotating gradient border when idle and no files */}
       {!isDragging && !hasFiles && (
-        <div className="absolute inset-0 rounded-xl pointer-events-none overflow-hidden p-[2px]">
+        <div className="absolute inset-0 rounded-xl pointer-events-none overflow-hidden p-[2px]" aria-hidden="true">
           <div className="animate-rotate-border absolute inset-0 rounded-xl" style={{ '--gradient-angle': '0deg' } as React.CSSProperties} />
           <div className="absolute inset-[2px] rounded-[10px] bg-background" />
         </div>
@@ -173,7 +183,7 @@ export function FileDropzone({
 
       {/* Animated dashed border when idle and files already present */}
       {!isDragging && hasFiles && (
-        <div className="absolute inset-0 rounded-xl pointer-events-none overflow-hidden">
+        <div className="absolute inset-0 rounded-xl pointer-events-none overflow-hidden" aria-hidden="true">
           <div className="absolute inset-0 animate-border-dance opacity-30" style={{
             maskImage: 'linear-gradient(#000 0 0)',
             WebkitMaskComposite: 'xor',
@@ -184,7 +194,7 @@ export function FileDropzone({
 
       {/* Green check overlay when files are present */}
       {hasFiles && !isDragging && (
-        <div className="absolute top-3 right-3 z-10">
+        <div className="absolute top-3 right-3 z-10" aria-hidden="true">
           <div className="flex h-7 w-7 items-center justify-center rounded-full bg-green-500 dark:bg-green-600 text-white shadow-md shadow-green-500/25 animate-in fade-in zoom-in duration-300">
             <CheckCircle2 className="h-4 w-4" />
           </div>
@@ -193,7 +203,7 @@ export function FileDropzone({
 
       {/* Background decoration when dragging */}
       {isDragging && (
-        <div className="absolute inset-0 -z-10">
+        <div className="absolute inset-0 -z-10" aria-hidden="true">
           <div className="absolute top-1/4 left-1/4 h-32 w-32 rounded-full bg-primary/10 blur-2xl animate-pulse" />
           <div className="absolute bottom-1/4 right-1/4 h-24 w-24 rounded-full bg-primary/8 blur-2xl animate-pulse" />
         </div>
@@ -201,22 +211,26 @@ export function FileDropzone({
 
       {/* Drag count indicator */}
       {isDragging && dragCount > 0 && (
-        <div className="absolute top-3 right-3 z-10">
+        <div className="absolute top-3 right-3 z-10" aria-hidden="true">
           <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-primary text-primary-foreground animate-pulse">
             {dragCount} file{dragCount !== 1 ? 's' : ''} dragging
           </span>
         </div>
       )}
 
-      <div className="flex flex-col items-center gap-4 p-8 sm:p-10">
-        <div className={`
-          p-4 rounded-2xl transition-all duration-300
-          ${isDragging
-            ? 'bg-primary/15 text-primary scale-110'
-            : 'bg-muted/80 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary group-hover:scale-105'
-          }
-          ${!isDragging ? 'animate-float' : ''}
-        `} style={!isDragging ? { animationDuration: '3s' } : undefined}>
+      <div className="flex flex-col items-center gap-4 p-6 sm:p-10">
+        <div
+          className={`
+            p-4 rounded-2xl transition-all duration-300
+            ${isDragging
+              ? 'bg-primary/15 text-primary scale-110'
+              : 'bg-muted/80 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary group-hover:scale-105'
+            }
+            ${!isDragging ? 'animate-float' : ''}
+          `}
+          style={!isDragging ? { animationDuration: '3s' } : undefined}
+          aria-hidden="true"
+        >
           {isDragging ? (
             <FileUp className="h-10 w-10" />
           ) : isPDF ? (

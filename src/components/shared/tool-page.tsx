@@ -160,15 +160,18 @@ export function ToolPage({
         <div className="absolute bottom-0 left-0 h-20 w-20 translate-y-4 -translate-x-4 rounded-full bg-gradient-to-tr from-primary/3 to-transparent blur-xl" />
 
         <div className="relative flex items-start gap-4">
-          <div className={`p-3.5 rounded-2xl ${tool.bgColor} shadow-sm transition-transform duration-300 group-hover:scale-105`}>
+          <div
+            className={`p-3.5 rounded-2xl ${tool.bgColor} shadow-sm transition-transform duration-300 group-hover:scale-105`}
+            aria-hidden="true"
+          >
             <Icon className={`h-7 w-7 ${tool.color}`} />
           </div>
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-2xl font-bold tracking-tight">{tool.name}</h1>
               {isAITool && (
                 <Badge className="bg-gradient-to-r from-violet-500 to-purple-500 text-white text-[10px] px-1.5 py-0 h-5 border-0 gap-0.5">
-                  <Sparkles className="h-2.5 w-2.5" />
+                  <Sparkles className="h-2.5 w-2.5" aria-hidden="true" />
                   AI Powered
                 </Badge>
               )}
