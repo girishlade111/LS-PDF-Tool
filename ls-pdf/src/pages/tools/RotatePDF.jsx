@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, memo, useCallback } from 'react';
-import { PDFDocument, degrees } from 'pdf-lib';
 import { RotateCw, RotateCcw, File as FileIcon, X, AlertCircle } from 'lucide-react';
 import { pdfjsLib } from '../../utils/pdfUtils';
 import ToolPageLayout from '../../components/common/ToolPageLayout';
@@ -8,6 +7,7 @@ import ProcessingStatus from '../../components/common/ProcessingStatus';
 import DownloadResult from '../../components/common/DownloadResult';
 import { useFileStore } from '../../context/FileStoreContext';
 import { addHistoryEntry } from '../../utils/indexedDBUtils';
+import usePDFWorker from '../../hooks/usePDFWorker';
 
 const formatFileSize = (bytes) => {
   if (bytes === 0) return '0 B';
@@ -129,10 +129,18 @@ const PageThumbnail = memo(({ pageIndex, rotation, onRotateCw, onRotateCcw, pdfD
 export default function RotatePDF() {
   const { state, dispatch } = useFileStore();
   const { inputFiles, outputFile, outputFileName, status, progress, errorMessage } = state;
+  const { process: processWorker, progress: workerProgress, isProcessing } = usePDFWorker();
 
   const [pdfDocProxy, setPdfDocProxy] = useState(null);
   const [numPages, setNumPages] = useState(0);
   const [rotations, setRotations] = useState([]); // Array tracking rotation degrees per page
+
+  // Sync worker progress
+  useEffect(() => {
+    if (isProcessing) {
+      dispatch({ type: 'SET_STATUS', payload: { status: 'processing', progress: workerProgress } });
+    }
+  }, [workerProgress, isProcessing, dispatch]);
 
   // Cleanup PDF doc proxy to prevent memory leaks when component unmounts
   useEffect(() => {
@@ -203,25 +211,8 @@ export default function RotatePDF() {
       const file = inputFiles[0];
       const arrayBuffer = await file.arrayBuffer();
       
-      // Use pdf-lib for the actual file modification
-      const pdfDoc = await PDFDocument.load(arrayBuffer);
-      const pages = pdfDoc.getPages();
+      const rotatedBytes = await processWorker('ROTATE', { fileData: arrayBuffer, rotations });
 
-      for(let i = 0; i < pages.length; i++) {
-        const currentRotation = pages[i].getRotation().angle;
-        const additionalRotation = rotations[i] || 0;
-        
-        // Combine current existing rotation with user's new additions
-        pages[i].setRotation(degrees(currentRotation + additionalRotation));
-
-        // Update progress smoothly
-        if (i % 5 === 0 || i === pages.length - 1) {
-          const currentProgress = Math.round(((i + 1) / pages.length) * 100);
-          dispatch({ type: 'SET_STATUS', payload: { status: 'processing', progress: currentProgress } });
-        }
-      }
-
-      const rotatedBytes = await pdfDoc.save();
       const blob = new Blob([rotatedBytes], { type: 'application/pdf' });
       const outName = 'rotated.pdf';
       
