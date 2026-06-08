@@ -4,7 +4,7 @@ import {
   LayoutList, FileText, Hash, Settings, Trash2,
   Layers, Crop, Unlock, Wrench, Eraser, GitCompare,
   ArrowUpDown, Code, PenTool, Sparkles, Brain, ClipboardList,
-  FileOutput
+  FileOutput, Eye, Type
 } from 'lucide-react';
 import React from 'react';
 
@@ -279,6 +279,24 @@ export const tools: ToolDefinition[] = [
     color: 'text-blue-600 dark:text-blue-400',
     bgColor: 'bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/30 dark:hover:bg-blue-950/50',
     category: 'convert',
+  },
+  {
+    id: 'view-pdf',
+    name: 'View PDF',
+    description: 'View and navigate PDF pages with zoom and pan',
+    icon: Eye,
+    color: 'text-cyan-600 dark:text-cyan-400',
+    bgColor: 'bg-cyan-50 hover:bg-cyan-100 dark:bg-cyan-950/30 dark:hover:bg-cyan-950/50',
+    category: 'convert',
+  },
+  {
+    id: 'header-footer',
+    name: 'Header & Footer',
+    description: 'Add headers and footers to PDF pages',
+    icon: Type,
+    color: 'text-amber-600 dark:text-amber-400',
+    bgColor: 'bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/30 dark:hover:bg-amber-950/50',
+    category: 'organize',
   },
 ];
 

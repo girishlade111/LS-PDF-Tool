@@ -38,27 +38,32 @@ function StepIndicator({ currentStep }: { currentStep: 1 | 2 | 3 }) {
 
         return (
           <React.Fragment key={step.number}>
-            <div className="flex items-center gap-1.5">
+            <div className="flex flex-col items-center gap-1">
               <div
                 className={`
-                  flex h-7 w-7 items-center justify-center rounded-full transition-all duration-300 shrink-0
+                  relative flex items-center justify-center rounded-full transition-all duration-300 shrink-0
                   ${isCompleted
-                    ? 'bg-green-500 text-white dark:bg-green-600'
+                    ? 'h-8 w-8 bg-green-500 text-white dark:bg-green-600'
                     : isActive
-                      ? 'bg-gradient-to-br from-red-500 to-orange-500 text-white shadow-sm shadow-primary/20'
-                      : 'bg-muted text-muted-foreground'
+                      ? 'h-9 w-9 bg-gradient-to-br from-red-500 to-orange-500 text-white shadow-sm shadow-primary/20 animate-step-pulse'
+                      : 'h-7 w-7 bg-muted text-muted-foreground'
                   }
                 `}
               >
                 {isCompleted ? (
-                  <CheckCircle2 className="h-4 w-4" />
+                  <>
+                    <span className="absolute -top-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-green-600 dark:bg-green-700 ring-2 ring-white dark:ring-green-500">
+                      <CheckCircle2 className="h-2.5 w-2.5 text-white" />
+                    </span>
+                    <StepIcon className="h-4 w-4" />
+                  </>
                 ) : (
-                  <StepIcon className="h-3.5 w-3.5" />
+                  <StepIcon className={isActive ? 'h-4 w-4' : 'h-3.5 w-3.5'} />
                 )}
               </div>
               <span
                 className={`
-                  text-xs font-medium transition-colors duration-300 hidden sm:inline
+                  text-[10px] sm:text-xs font-medium transition-colors duration-300 text-center
                   ${isActive ? 'text-foreground' : isCompleted ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}
                 `}
               >
@@ -68,8 +73,8 @@ function StepIndicator({ currentStep }: { currentStep: 1 | 2 | 3 }) {
             {index < steps.length - 1 && (
               <div
                 className={`
-                  h-px w-6 sm:w-10 transition-colors duration-300
-                  ${currentStep > step.number ? 'bg-green-500 dark:bg-green-600' : 'bg-border'}
+                  relative h-0.5 w-6 sm:w-10 mt-[-16px] sm:mt-[-18px] transition-all duration-500 rounded-full overflow-hidden
+                  ${currentStep > step.number ? 'animate-line-flow' : 'bg-border'}
                 `}
               />
             )}
@@ -106,7 +111,7 @@ export function ToolPage({
   }
 
   return (
-    <div className="space-y-6 animate-page-enter">
+    <div className="space-y-6 px-4 sm:px-6 animate-page-enter">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-sm text-muted-foreground" aria-label="Breadcrumb">
         <Button

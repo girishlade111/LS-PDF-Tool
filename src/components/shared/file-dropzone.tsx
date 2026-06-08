@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useState, useRef } from 'react';
-import { FileUp, FileText, Image as ImageIcon } from 'lucide-react';
+import { FileUp, FileText, Image as ImageIcon, CheckCircle2 } from 'lucide-react';
 import { generateId, formatFileSize } from '@/lib/pdf-utils';
 import { PDFFile } from '@/store/file-store';
 import { useFileStore } from '@/store/file-store';
@@ -30,16 +30,17 @@ export function FileDropzone({
   const [isDragging, setIsDragging] = useState(false);
   const [dragCount, setDragCount] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { addFiles } = useFileStore();
+  const { addFiles, files } = useFileStore();
   const isPDF = accept.includes('pdf');
   const isImage = accept.includes('jpg') || accept.includes('png') || accept.includes('image');
+  const hasFiles = files.length > 0;
 
   const processFiles = useCallback(async (fileList: FileList | File[]) => {
-    const files = Array.from(fileList);
+    const fileArray = Array.from(fileList);
     const pdfFiles: PDFFile[] = [];
     let skippedCount = 0;
 
-    for (const file of files) {
+    for (const file of fileArray) {
       if (file.size > maxSize) {
         skippedCount++;
         toast.error(`File too large`, {
@@ -138,11 +139,6 @@ export function FileDropzone({
           : 'border-2 border-dashed border-muted-foreground/25 hover:border-primary/60 hover:bg-muted/30'
         }
       `}
-      style={!isDragging ? {
-        backgroundSize: '0% 2px',
-        backgroundRepeat: 'no-repeat',
-        backgroundPosition: 'bottom',
-      } : undefined}
       onDragEnter={handleDragEnter}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -167,14 +163,31 @@ export function FileDropzone({
         className="hidden"
       />
 
-      {/* Animated dashed border when idle */}
-      {!isDragging && (
+      {/* Animated rotating gradient border when idle and no files */}
+      {!isDragging && !hasFiles && (
+        <div className="absolute inset-0 rounded-xl pointer-events-none overflow-hidden p-[2px]">
+          <div className="animate-rotate-border absolute inset-0 rounded-xl" style={{ '--gradient-angle': '0deg' } as React.CSSProperties} />
+          <div className="absolute inset-[2px] rounded-[10px] bg-background" />
+        </div>
+      )}
+
+      {/* Animated dashed border when idle and files already present */}
+      {!isDragging && hasFiles && (
         <div className="absolute inset-0 rounded-xl pointer-events-none overflow-hidden">
           <div className="absolute inset-0 animate-border-dance opacity-30" style={{
             maskImage: 'linear-gradient(#000 0 0)',
             WebkitMaskComposite: 'xor',
             maskComposite: 'exclude',
           }} />
+        </div>
+      )}
+
+      {/* Green check overlay when files are present */}
+      {hasFiles && !isDragging && (
+        <div className="absolute top-3 right-3 z-10">
+          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-green-500 dark:bg-green-600 text-white shadow-md shadow-green-500/25 animate-in fade-in zoom-in duration-300">
+            <CheckCircle2 className="h-4 w-4" />
+          </div>
         </div>
       )}
 
@@ -218,6 +231,12 @@ export function FileDropzone({
             {isDragging ? 'Release to upload' : label}
           </p>
           <p className="text-sm text-muted-foreground mt-1.5">{description}</p>
+          {/* Pulsing subtitle */}
+          {!isDragging && (
+            <p className="text-xs text-muted-foreground/60 mt-2 animate-gentle-pulse">
+              Click or drag to upload
+            </p>
+          )}
         </div>
 
         {/* File type icons row */}

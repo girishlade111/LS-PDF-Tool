@@ -29,7 +29,9 @@ export type ToolId =
   | 'ocr-pdf'
   | 'summarize-pdf'
   | 'fill-form'
-  | 'pdf-to-docx';
+  | 'pdf-to-docx'
+  | 'view-pdf'
+  | 'header-footer';
 
 interface NavStore {
   currentPage: 'home' | ToolId;

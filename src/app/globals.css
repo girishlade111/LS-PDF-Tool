@@ -531,3 +531,120 @@
 .dark .hover-lift:hover {
   box-shadow: 0 8px 25px oklch(0 0 0 / 0.3);
 }
+
+/* Step indicator pulse animation */
+@keyframes step-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 oklch(0.6 0.2 25 / 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px oklch(0.6 0.2 25 / 0);
+  }
+}
+
+.animate-step-pulse {
+  animation: step-pulse 2s ease-in-out infinite;
+}
+
+/* Connecting line gradient flow animation */
+@keyframes line-flow {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-line-flow {
+  background: linear-gradient(
+    90deg,
+    oklch(0.65 0.2 145 / 0.8) 0%,
+    oklch(0.6 0.2 25 / 0.9) 50%,
+    oklch(0.65 0.2 145 / 0.8) 100%
+  );
+  background-size: 200% 100%;
+  animation: line-flow 2s linear infinite;
+}
+
+.dark .animate-line-flow {
+  background: linear-gradient(
+    90deg,
+    oklch(0.55 0.15 145 / 0.6) 0%,
+    oklch(0.5 0.15 25 / 0.7) 50%,
+    oklch(0.55 0.15 145 / 0.6) 100%
+  );
+  background-size: 200% 100%;
+}
+
+/* Rotating gradient border for dropzone */
+@keyframes rotate-gradient {
+  0% {
+    --gradient-angle: 0deg;
+  }
+  100% {
+    --gradient-angle: 360deg;
+  }
+}
+
+.animate-rotate-border {
+  animation: rotate-gradient 4s linear infinite;
+  background: conic-gradient(
+    from var(--gradient-angle),
+    oklch(0.6 0.2 25 / 0.6),
+    oklch(0.65 0.18 50 / 0.3),
+    oklch(0.6 0.15 145 / 0.5),
+    oklch(0.65 0.18 280 / 0.3),
+    oklch(0.6 0.2 25 / 0.6)
+  );
+}
+
+.dark .animate-rotate-border {
+  background: conic-gradient(
+    from var(--gradient-angle),
+    oklch(0.55 0.2 25 / 0.5),
+    oklch(0.5 0.15 50 / 0.2),
+    oklch(0.55 0.15 145 / 0.4),
+    oklch(0.5 0.15 280 / 0.2),
+    oklch(0.55 0.2 25 / 0.5)
+  );
+}
+
+/* Gentle pulse for subtitle text */
+@keyframes gentle-pulse {
+  0%, 100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.animate-gentle-pulse {
+  animation: gentle-pulse 2.5s ease-in-out infinite;
+}
+
+/* FAQ chevron rotation */
+.faq-chevron {
+  transition: transform 0.3s ease;
+}
+
+.faq-chevron-open {
+  transform: rotate(180deg);
+}
+
+/* Featured tools scroll container */
+.featured-scroll {
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.featured-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.featured-scroll > * {
+  scroll-snap-align: start;
+}

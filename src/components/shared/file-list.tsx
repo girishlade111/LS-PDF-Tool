@@ -216,9 +216,9 @@ export function FileList() {
       {/* Add more files button */}
       <button
         onClick={handleAddMoreClick}
-        className="flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground/20 bg-muted/20 py-3 text-sm text-muted-foreground hover:border-primary/40 hover:bg-primary/5 hover:text-primary transition-all duration-200"
+        className="flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground/20 bg-muted/20 py-2.5 sm:py-3 text-xs sm:text-sm text-muted-foreground hover:border-primary/40 hover:bg-primary/5 hover:text-primary transition-all duration-200 min-h-[44px]"
       >
-        <Plus className="h-4 w-4" />
+        <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
         Add more files
       </button>
       <input

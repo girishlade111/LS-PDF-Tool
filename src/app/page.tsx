@@ -21,10 +21,16 @@ import {
   Wrench,
   Star,
   Search,
-  Command,
   Gift,
-  ArrowRightLeft,
   Mail,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  Eye,
+  Droplets,
+  PenTool,
+  Minimize2,
+  Merge,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -37,7 +43,6 @@ import { Separator } from '@/components/ui/separator';
 import { ErrorBoundary } from '@/components/shared/error-boundary';
 import { RecentHistory } from '@/components/shared/recent-history';
 import { ThemeToggle } from '@/components/shared/theme-toggle';
-import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 
 // Lazy load tool components
 const MergePDFTool = lazy(() =>
@@ -127,6 +132,12 @@ const FillFormTool = lazy(() =>
 const PDFToDOCXTool = lazy(() =>
   import('@/tools/pdf-to-docx').then((m) => ({ default: m.PDFToDOCXTool }))
 );
+const ViewPDFTool = lazy(() =>
+  import('@/tools/view-pdf').then((m) => ({ default: m.ViewPDFTool }))
+);
+const HeaderFooterTool = lazy(() =>
+  import('@/tools/header-footer').then((m) => ({ default: m.HeaderFooterTool }))
+);
 
 const toolComponents: Record<string, React.LazyExoticComponent<React.ComponentType>> = {
   merge: MergePDFTool,
@@ -158,6 +169,8 @@ const toolComponents: Record<string, React.LazyExoticComponent<React.ComponentTy
   'summarize-pdf': SummarizePDFTool,
   'fill-form': FillFormTool,
   'pdf-to-docx': PDFToDOCXTool,
+  'view-pdf': ViewPDFTool,
+  'header-footer': HeaderFooterTool,
 };
 
 function ToolLoader() {
@@ -250,12 +263,12 @@ function Header() {
           </div>
         </button>
 
-        <nav className="hidden md:flex items-center gap-1">
+        <nav className="hidden md:flex items-center gap-1 overflow-x-auto">
           {/* Search button */}
           <Button
             variant="outline"
             size="sm"
-            className="h-8 gap-2 text-muted-foreground border-dashed"
+            className="h-8 gap-2 text-muted-foreground border-dashed shrink-0"
             onClick={() => setSearchOpen(true)}
           >
             <Search className="h-3.5 w-3.5" />
@@ -264,20 +277,22 @@ function Header() {
               <span className="text-xs">⌘</span>K
             </kbd>
           </Button>
-          <div className="w-px h-5 bg-border mx-1" />
+          <div className="w-px h-5 bg-border mx-1 shrink-0" />
           <ThemeToggle />
-          <div className="w-px h-5 bg-border mx-1" />
-          {categories.map((cat) => (
-            <Button
-              key={cat.id}
-              variant={selectedCategory === cat.id ? 'default' : 'ghost'}
-              size="sm"
-              className={selectedCategory === cat.id ? '' : 'text-muted-foreground hover:text-foreground'}
-              onClick={() => handleCategoryClick(cat.id)}
-            >
-              {cat.name}
-            </Button>
-          ))}
+          <div className="w-px h-5 bg-border mx-1 shrink-0" />
+          <div className="flex items-center gap-1 overflow-x-auto scrollbar-thin">
+            {categories.map((cat) => (
+              <Button
+                key={cat.id}
+                variant={selectedCategory === cat.id ? 'default' : 'ghost'}
+                size="sm"
+                className={`shrink-0 ${selectedCategory === cat.id ? '' : 'text-muted-foreground hover:text-foreground'}`}
+                onClick={() => handleCategoryClick(cat.id)}
+              >
+                {cat.name}
+              </Button>
+            ))}
+          </div>
         </nav>
 
         <div className="flex items-center gap-1 md:hidden">
@@ -378,7 +393,7 @@ function Footer() {
       </div>
 
       <div className="mx-auto max-w-6xl px-4 sm:px-6 py-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-red-500 to-orange-500">
@@ -513,7 +528,7 @@ function HowItWorksSection() {
     {
       number: 2,
       title: 'Choose Your Tool',
-      description: 'Select from 29+ tools: merge, split, compress, rotate, watermark, and more.',
+      description: 'Select from 31+ tools: merge, split, compress, rotate, watermark, and more.',
       icon: Wrench,
     },
     {
@@ -635,7 +650,7 @@ function StatsSection() {
   }, []);
 
   const statDefs = [
-    { target: 29, suffix: '+', label: 'PDF Tools', icon: Wrench },
+    { target: 31, suffix: '+', label: 'PDF Tools', icon: Wrench },
     { target: 100, suffix: '%', label: 'Free Forever', icon: Gift },
     { target: 0, suffix: '', label: 'Data Uploads', icon: Shield },
     { target: 50, suffix: 'K+', label: 'Happy Users', icon: Users },
@@ -1236,7 +1251,7 @@ function ToolsGrid() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 transition-all duration-500">
               {categoryTools.map((tool) => {
                 const Icon = tool.icon;
-                const isNewTool = ['flatten', 'crop-pdf', 'unlock', 'repair', 'redact', 'compare', 'rearrange', 'pdf-to-html', 'sign', 'pdf-to-markdown', 'ocr-pdf', 'summarize-pdf', 'fill-form', 'pdf-to-docx'].includes(tool.id);
+                const isNewTool = ['view-pdf', 'header-footer'].includes(tool.id);
                 const isAITool = ['pdf-to-markdown', 'ocr-pdf', 'summarize-pdf', 'pdf-to-docx'].includes(tool.id);
                 const categoryLabel = categories.find((c) => c.id === tool.category)?.name || tool.category;
                 return (
@@ -1359,12 +1374,164 @@ function WhyChooseCounter({ target, suffix }: { target: number; suffix: string }
   );
 }
 
+// ─── Featured Tools Section ────────────────────────────────────────────────────
+
+function FeaturedToolsSection() {
+  const { navigate } = useNavStore();
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const featuredTools = [
+    {
+      id: 'view-pdf',
+      name: 'View PDF',
+      description: 'View and navigate PDF pages with zoom',
+      icon: Eye,
+      color: 'text-cyan-600 dark:text-cyan-400',
+      bgColor: 'bg-cyan-50 dark:bg-cyan-950/30',
+    },
+    {
+      id: 'merge',
+      name: 'Merge PDF',
+      description: 'Combine multiple PDFs into one',
+      icon: Merge,
+      color: 'text-orange-600 dark:text-orange-400',
+      bgColor: 'bg-orange-50 dark:bg-orange-950/30',
+    },
+    {
+      id: 'compress',
+      name: 'Compress PDF',
+      description: 'Reduce file size while keeping quality',
+      icon: Minimize2,
+      color: 'text-green-600 dark:text-green-400',
+      bgColor: 'bg-green-50 dark:bg-green-950/30',
+    },
+    {
+      id: 'pdf-to-text',
+      name: 'PDF to Text',
+      description: 'Extract text content from PDF',
+      icon: FileText,
+      color: 'text-sky-600 dark:text-sky-400',
+      bgColor: 'bg-sky-50 dark:bg-sky-950/30',
+    },
+    {
+      id: 'watermark',
+      name: 'Watermark',
+      description: 'Add text or image watermark',
+      icon: Droplets,
+      color: 'text-cyan-600 dark:text-cyan-400',
+      bgColor: 'bg-cyan-50 dark:bg-cyan-950/30',
+    },
+    {
+      id: 'sign',
+      name: 'Sign PDF',
+      description: 'Add digital signature to PDF',
+      icon: PenTool,
+      color: 'text-purple-600 dark:text-purple-400',
+      bgColor: 'bg-purple-50 dark:bg-purple-950/30',
+    },
+  ];
+
+  const scroll = (direction: 'left' | 'right') => {
+    if (!scrollRef.current) return;
+    const scrollAmount = 280;
+    scrollRef.current.scrollBy({
+      left: direction === 'left' ? -scrollAmount : scrollAmount,
+      behavior: 'smooth',
+    });
+  };
+
+  return (
+    <section className="relative mx-auto max-w-6xl px-4 sm:px-6 pb-12">
+      {/* Gradient background strip */}
+      <div className="absolute inset-0 -z-10 bg-gradient-to-r from-red-500/[0.03] via-orange-500/[0.05] to-amber-500/[0.03] dark:from-red-500/[0.05] dark:via-orange-500/[0.08] dark:to-amber-500/[0.05]" />
+
+      <div className="flex items-center justify-between mb-5">
+        <div>
+          <h2 className="text-xl font-bold">Featured Tools</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">Quick access to popular tools</p>
+        </div>
+        {/* Desktop arrow navigation */}
+        <div className="hidden sm:flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8 rounded-full"
+            onClick={() => scroll('left')}
+            aria-label="Scroll left"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8 rounded-full"
+            onClick={() => scroll('right')}
+            aria-label="Scroll right"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Scrollable container */}
+      <div
+        ref={scrollRef}
+        className="featured-scroll flex gap-4 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0"
+      >
+        {featuredTools.map((tool) => {
+          const Icon = tool.icon;
+          return (
+            <div
+              key={tool.id}
+              className="group flex-shrink-0 w-[250px] rounded-xl border bg-card p-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
+              onClick={() => navigate(tool.id as Parameters<typeof navigate>[0])}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  navigate(tool.id as Parameters<typeof navigate>[0]);
+                }
+              }}
+            >
+              <div className="flex items-start gap-3">
+                <div className={`p-2 rounded-lg ${tool.bgColor} group-hover:scale-105 transition-transform duration-200 shrink-0`}>
+                  <Icon className={`h-5 w-5 ${tool.color}`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-sm">{tool.name}</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{tool.description}</p>
+                </div>
+              </div>
+              <div className="mt-3">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="w-full h-7 text-xs gap-1 group-hover:bg-primary group-hover:text-primary-foreground group-hover:border-primary transition-all duration-200"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(tool.id as Parameters<typeof navigate>[0]);
+                  }}
+                >
+                  Try Now
+                  <ArrowRight className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 // ─── Home Page ─────────────────────────────────────────────────────────────────
 
 function HomePage() {
   return (
     <>
       <HeroSection />
+      <FeaturedToolsSection />
       <HowItWorksSection />
       <RecentHistory />
       <ToolsGrid />
@@ -1445,6 +1612,46 @@ function HomePage() {
 
 // ─── FAQ Section ──────────────────────────────────────────────────────────────
 
+function FAQItem({ question, answer, index }: { question: string; answer: string; index: number }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div
+      className={`border-b last:border-b-0 transition-colors duration-200 ${
+        isOpen
+          ? 'bg-muted/30 dark:bg-muted/20'
+          : 'hover:bg-muted/10 dark:hover:bg-muted/5'
+      }`}
+    >
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex w-full items-center justify-between px-4 sm:px-6 py-4 text-left group"
+        aria-expanded={isOpen}
+      >
+        <span className={`text-sm sm:text-base font-medium transition-colors duration-200 pr-4 ${
+          isOpen ? 'text-foreground' : 'text-foreground/80 group-hover:text-foreground'
+        }`}>
+          {question}
+        </span>
+        <ChevronDown
+          className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-300 ${
+            isOpen ? 'rotate-180 text-primary' : 'group-hover:text-foreground'
+          }`}
+        />
+      </button>
+      <div
+        className={`overflow-hidden transition-all duration-300 ease-in-out ${
+          isOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+        }`}
+      >
+        <p className="px-4 sm:px-6 pb-4 text-sm text-muted-foreground leading-relaxed">
+          {answer}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function FAQSection() {
   const faqs = [
     {
@@ -1456,20 +1663,12 @@ function FAQSection() {
       answer: 'AI-powered tools like OCR PDF, PDF to Markdown, and PDF to DOCX use advanced AI models to analyze your document pages. These tools can extract text from scanned documents, convert PDFs to structured Markdown format, and create editable Word documents with high accuracy.',
     },
     {
-      question: 'Can I fill in PDF forms?',
-      answer: 'Yes! Our Fill Form tool reads interactive form fields from PDFs (text fields, checkboxes, dropdowns, and radio buttons) and lets you fill them in directly in your browser. Save the completed form as a new PDF.',
-    },
-    {
-      question: 'How many PDF tools are available?',
-      answer: 'We offer 29+ free PDF tools including merge, split, compress, rotate, watermark, protect, OCR, summarize, fill forms, convert to DOCX, and many more. All tools work directly in your browser with no registration required.',
+      question: 'How do I merge multiple PDFs?',
+      answer: 'Simply open the Merge PDF tool, drag and drop your PDF files, rearrange them in the order you want, and click "Merge PDFs". Your merged file will be ready for download instantly — no upload needed.',
     },
     {
       question: 'Can I use these tools offline?',
       answer: 'Most tools work entirely offline in your browser since they process files locally. AI-powered tools (OCR, PDF to Markdown) require an internet connection to communicate with our AI service.',
-    },
-    {
-      question: 'Do I need to create an account?',
-      answer: 'No registration required. Just open a tool and start working.',
     },
     {
       question: "What's the maximum file size?",
@@ -1477,7 +1676,7 @@ function FAQSection() {
     },
     {
       question: 'Is there a limit on how many files I can process?',
-      answer: 'No limits! Process as many files as you need, completely free.',
+      answer: 'No limits! Process as many files as you need, completely free. No registration or account required.',
     },
   ];
 
@@ -1489,18 +1688,14 @@ function FAQSection() {
           <p className="text-muted-foreground mt-2">Everything you need to know about PDF Tools</p>
         </div>
         <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
-          <Accordion type="single" collapsible className="px-4 sm:px-6">
-            {faqs.map((faq, index) => (
-              <AccordionItem key={index} value={`faq-${index}`}>
-                <AccordionTrigger className="text-left text-sm sm:text-base font-medium hover:no-underline">
-                  {faq.question}
-                </AccordionTrigger>
-                <AccordionContent className="text-sm text-muted-foreground leading-relaxed">
-                  {faq.answer}
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
+          {faqs.map((faq, index) => (
+            <FAQItem
+              key={index}
+              question={faq.question}
+              answer={faq.answer}
+              index={index}
+            />
+          ))}
         </div>
       </div>
     </section>
