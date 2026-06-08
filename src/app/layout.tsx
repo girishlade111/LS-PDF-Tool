@@ -56,6 +56,8 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          {/* Global error sink (window.onerror + unhandledrejection). */}
+          <GlobalErrorLogger />
           {children}
           <Toaster />
         </ThemeProvider>
