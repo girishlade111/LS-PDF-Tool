@@ -6,52 +6,52 @@
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://pdf.ladestack.in/tools/merge</loc>
+    <loc>https://pdf.ladestack.in/merge</loc>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://pdf.ladestack.in/tools/split</loc>
+    <loc>https://pdf.ladestack.in/split</loc>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://pdf.ladestack.in/tools/compress</loc>
+    <loc>https://pdf.ladestack.in/compress</loc>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://pdf.ladestack.in/tools/rotate</loc>
+    <loc>https://pdf.ladestack.in/rotate</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://pdf.ladestack.in/tools/jpg-to-pdf</loc>
+    <loc>https://pdf.ladestack.in/jpg-to-pdf</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://pdf.ladestack.in/tools/pdf-to-jpg</loc>
+    <loc>https://pdf.ladestack.in/pdf-to-jpg</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://pdf.ladestack.in/tools/watermark</loc>
+    <loc>https://pdf.ladestack.in/watermark</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://pdf.ladestack.in/tools/protect</loc>
+    <loc>https://pdf.ladestack.in/protect</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://pdf.ladestack.in/tools/organize</loc>
+    <loc>https://pdf.ladestack.in/organize</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://pdf.ladestack.in/tools/pdf-to-text</loc>
+    <loc>https://pdf.ladestack.in/pdf-to-text</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
