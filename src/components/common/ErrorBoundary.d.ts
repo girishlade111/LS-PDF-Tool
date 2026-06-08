@@ -6,6 +6,10 @@ import * as React from 'react';
  *
  * Keeps the JSX file dependency-free from TS while giving consumers
  * a clean, fully-typed API.
+ *
+ * The `fallback` prop type is intentionally permissive (a React element
+ * with any props) so the boundary can `cloneElement` and inject
+ * `error` / `resetError` without forcing consumers to type every prop.
  */
 
 export interface ErrorBoundaryProps {
@@ -15,10 +19,8 @@ export interface ErrorBoundaryProps {
    * inject `error` and `resetError` props automatically via
    * `React.cloneElement`.
    */
-  fallback?: React.ReactElement<{
-    error?: Error | null;
-    resetError?: () => void;
-  }>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  fallback?: React.ReactElement<any>;
   /** Optional callback fired from `componentDidCatch`. */
   onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
 }
