@@ -2,84 +2,117 @@ import { openDB } from 'idb';
 
 export const DB_NAME = 'ls-pdf-db';
 export const STORE_NAME = 'history';
-export const DB_VERSION = 1;
+const DB_VERSION = 1;
 
-let dbInstance = null;
-
+/**
+ * Initializes the IndexedDB instance.
+ * Creates the database and object store if they don't exist.
+ */
 export async function initDB() {
-  if (dbInstance) return dbInstance;
-
   try {
-    dbInstance = await openDB(DB_NAME, DB_VERSION, {
+    const db = await openDB(DB_NAME, DB_VERSION, {
       upgrade(db) {
         if (!db.objectStoreNames.contains(STORE_NAME)) {
           const store = db.createObjectStore(STORE_NAME, {
             keyPath: 'id',
             autoIncrement: true,
           });
+          // Create an index on processedAt for sorting and enforcing the 5-item limit
           store.createIndex('processedAt', 'processedAt');
         }
       },
     });
-    return dbInstance;
+    return db;
   } catch (error) {
-    console.error('IndexedDB init error:', error);
+    console.error('Failed to initialize IndexedDB:', error);
     return null;
   }
 }
 
+/**
+ * Adds a new history entry.
+ * Keeps only the last 5 entries, deleting older ones automatically.
+ * 
+ * @param {Object} entry - { toolName, fileName, fileSize, processedAt, status }
+ */
 export async function addHistoryEntry(entry) {
   try {
     const db = await initDB();
     if (!db) return null;
 
-    const newEntry = {
-      toolName: entry.toolName,
-      fileName: entry.fileName,
-      fileSize: entry.fileSize,
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+
+    // Ensure we have a valid ISO timestamp
+    const entryToSave = {
+      ...entry,
       processedAt: entry.processedAt || new Date().toISOString(),
-      status: entry.status || 'success',
     };
 
-    await db.add(STORE_NAME, newEntry);
+    await store.add(entryToSave);
 
-    const count = await db.count(STORE_NAME);
-    if (count > 5) {
-      const oldest = await db.getAllFromIndex(STORE_NAME, 'processedAt', 1);
-      if (oldest.length > 0) {
-        await db.delete(STORE_NAME, oldest[0].id);
-      }
+    // Enforce the maximum limit of 5 entries
+    const index = store.index('processedAt');
+    let cursor = await index.openCursor();
+    let count = await store.count();
+
+    // Iterate through the oldest entries (ascending by processedAt) and delete them
+    while (count > 5 && cursor) {
+      await cursor.delete();
+      cursor = await cursor.continue();
+      count--;
     }
 
-    return newEntry;
+    await tx.done;
+    return true;
   } catch (error) {
-    console.error('addHistoryEntry error:', error);
+    console.error('Failed to add history entry:', error);
     return null;
   }
 }
 
+/**
+ * Retrieves all history entries, sorted by processedAt descending (newest first).
+ */
 export async function getHistory() {
   try {
     const db = await initDB();
-    if (!db) return [];
+    if (!db) return null;
 
-    const entries = await db.getAllFromIndex(STORE_NAME, 'processedAt');
-    return entries.sort((a, b) => new Date(b.processedAt) - new Date(a.processedAt));
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const store = tx.objectStore(STORE_NAME);
+    const index = store.index('processedAt');
+
+    // Use a cursor to fetch records in descending order
+    let cursor = await index.openCursor(null, 'prev');
+    const results = [];
+    
+    while (cursor) {
+      results.push(cursor.value);
+      cursor = await cursor.continue();
+    }
+    
+    return results;
   } catch (error) {
-    console.error('getHistory error:', error);
-    return [];
+    console.error('Failed to get history:', error);
+    return null;
   }
 }
 
+/**
+ * Deletes all history entries from the object store.
+ */
 export async function clearHistory() {
   try {
     const db = await initDB();
-    if (!db) return false;
+    if (!db) return null;
 
-    await db.clear(STORE_NAME);
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    await tx.objectStore(STORE_NAME).clear();
+    await tx.done;
     return true;
   } catch (error) {
-    console.error('clearHistory error:', error);
-    return false;
+    console.error('Failed to clear history:', error);
+    return null;
   }
 }
