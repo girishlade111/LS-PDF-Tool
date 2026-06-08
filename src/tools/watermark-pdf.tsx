@@ -116,13 +116,20 @@ export function WatermarkPDFTool() {
         </div>
         <div className="space-y-2">
           <Label className="text-sm font-medium">Color</Label>
-          <div className="flex gap-2">
+          <div
+            className="flex gap-2"
+            role="radiogroup"
+            aria-label="Watermark color"
+          >
             {colorPresets.map((preset) => (
               <button
                 key={preset.name}
                 type="button"
+                role="radio"
+                aria-checked={color.name === preset.name}
+                aria-label={`${preset.name} watermark color`}
                 onClick={() => setColor(preset)}
-                className={`w-9 h-9 rounded-full border-2 transition-all flex items-center justify-center ${
+                className={`w-9 h-9 rounded-full border-2 transition-all flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
                   color.name === preset.name
                     ? 'border-primary scale-110 shadow-md'
                     : 'border-transparent hover:border-muted-foreground/30'
@@ -132,6 +139,7 @@ export function WatermarkPDFTool() {
                 <span
                   className="w-6 h-6 rounded-full"
                   style={{ backgroundColor: preset.hex }}
+                  aria-hidden="true"
                 />
               </button>
             ))}
