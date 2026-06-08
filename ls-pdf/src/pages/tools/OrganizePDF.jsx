@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, memo, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { PDFDocument } from 'pdf-lib';
 import { LayoutGrid, File as FileIcon, X, AlertCircle, ArrowLeft, ArrowRight, RotateCcw, Trash2, CheckSquare, Square } from 'lucide-react';
 import { pdfjsLib } from '../../utils/pdfUtils';
@@ -6,6 +6,8 @@ import ToolPageLayout from '../../components/common/ToolPageLayout';
 import FileDropzone from '../../components/common/FileDropzone';
 import ProcessingStatus from '../../components/common/ProcessingStatus';
 import DownloadResult from '../../components/common/DownloadResult';
+import PDFThumbnail from '../../components/common/PDFThumbnail';
+import usePDFThumbnails from '../../hooks/usePDFThumbnails';
 import { useFileStore } from '../../context/FileStoreContext';
 import { addHistoryEntry } from '../../utils/indexedDBUtils';
 
@@ -17,162 +19,6 @@ const formatFileSize = (bytes) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 };
 
-const PageThumbnail = memo(({ 
-  item, 
-  index, 
-  total, 
-  selectionMode, 
-  onToggleSelect, 
-  onDelete, 
-  onMoveLeft, 
-  onMoveRight, 
-  pdfDoc 
-}) => {
-  const canvasRef = useRef(null);
-  const containerRef = useRef(null);
-  const [isVisible, setIsVisible] = useState(false);
-  const [rendered, setRendered] = useState(false);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          setIsVisible(true);
-          observer.disconnect();
-        }
-      },
-      { rootMargin: '200px' }
-    );
-    if (containerRef.current) observer.observe(containerRef.current);
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    if (!isVisible || rendered || !pdfDoc || !canvasRef.current) return;
-
-    let renderTask = null;
-    let isCancelled = false;
-
-    const renderPage = async () => {
-      try {
-        const page = await pdfDoc.getPage(item.originalIndex + 1); // pdfjs is 1-based
-        if (isCancelled) return;
-        
-        const viewport = page.getViewport({ scale: 0.25 });
-        const canvas = canvasRef.current;
-        const context = canvas.getContext('2d');
-        canvas.height = viewport.height;
-        canvas.width = viewport.width;
-
-        renderTask = page.render({ canvasContext: context, viewport });
-        await renderTask.promise;
-        if (!isCancelled) setRendered(true);
-      } catch (err) {
-        if (err.name !== 'RenderingCancelledException') {
-          console.error(`Error rendering page ${item.originalIndex + 1}`, err);
-        }
-      }
-    };
-
-    renderPage();
-
-    return () => {
-      isCancelled = true;
-      if (renderTask) renderTask.cancel();
-    };
-  }, [isVisible, rendered, pdfDoc, item.originalIndex]);
-
-  const handleClick = () => {
-    if (selectionMode && !item.deleted) {
-      onToggleSelect(item.id);
-    }
-  };
-
-  return (
-    <div 
-      ref={containerRef} 
-      onClick={handleClick}
-      className={`flex flex-col items-center bg-white p-2 sm:p-3 rounded-lg border-2 shadow-sm transition-all group relative ${
-        selectionMode && !item.deleted ? 'cursor-pointer' : ''
-      } ${
-        item.selected ? 'border-primary bg-primary/5' : 'border-muted/20 hover:border-primary/30'
-      } ${
-        item.deleted ? 'opacity-70 grayscale border-red-200' : ''
-      }`}
-    >
-      <div className="relative w-full aspect-[1/1.4] flex items-center justify-center bg-surface mb-2 overflow-hidden rounded border border-muted/10">
-        {!rendered && (
-          <div className="absolute inset-0 flex items-center justify-center text-muted text-xs animate-pulse">
-            Loading...
-          </div>
-        )}
-        <canvas 
-          ref={canvasRef} 
-          className={`max-w-full max-h-full transition-opacity duration-300 ${!rendered ? 'opacity-0' : 'opacity-100 shadow-sm'}`}
-        />
-        
-        {/* Deleted Overlay */}
-        {item.deleted && (
-          <div className="absolute inset-0 bg-red-500/20 backdrop-blur-[1px] flex items-center justify-center z-10">
-            <span className="bg-red-600 text-white text-xs px-2 py-1 rounded shadow-sm font-bold tracking-wide">
-              Deleted
-            </span>
-          </div>
-        )}
-
-        {/* Top-Left Badge: Current Page Number */}
-        <div className="absolute top-1 left-1 bg-white/90 backdrop-blur-sm px-1.5 py-0.5 rounded text-[10px] font-bold text-text shadow-sm z-20 border border-muted/10">
-          {index + 1}
-        </div>
-
-        {/* Top-Right: Delete or Checkbox */}
-        {!item.deleted && (
-          <div className="absolute top-1 right-1 z-20">
-            {selectionMode ? (
-              <div className="bg-white rounded-md shadow-sm">
-                {item.selected ? <CheckSquare className="w-5 h-5 text-primary" /> : <Square className="w-5 h-5 text-muted/50" />}
-              </div>
-            ) : (
-              <button 
-                onClick={(e) => { e.stopPropagation(); onDelete(item.id); }}
-                className="bg-white border border-red-200 text-red-500 hover:text-white hover:bg-red-500 rounded p-1 shadow-sm opacity-0 group-hover:opacity-100 transition-all"
-                title="Delete Page"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-      
-      {/* Bottom Reorder Controls */}
-      <div className="flex items-center justify-between w-full mt-1">
-        <button 
-          onClick={(e) => { e.stopPropagation(); onMoveLeft(index); }} 
-          disabled={index === 0 || item.deleted || selectionMode}
-          className="p-1.5 text-muted hover:text-text disabled:opacity-20 rounded hover:bg-muted/10 transition-colors"
-          title="Move Left"
-        >
-          <ArrowLeft className="w-4 h-4" />
-        </button>
-        
-        <span className="text-[10px] font-medium text-muted truncate px-1">
-          (Orig: {item.originalIndex + 1})
-        </span>
-        
-        <button 
-          onClick={(e) => { e.stopPropagation(); onMoveRight(index); }} 
-          disabled={index === total - 1 || item.deleted || selectionMode}
-          className="p-1.5 text-muted hover:text-text disabled:opacity-20 rounded hover:bg-muted/10 transition-colors"
-          title="Move Right"
-        >
-          <ArrowRight className="w-4 h-4" />
-        </button>
-      </div>
-    </div>
-  );
-});
-
 export default function OrganizePDF() {
   const { state, dispatch } = useFileStore();
   const { inputFiles, outputFile, outputFileName, status, progress, errorMessage } = state;
@@ -183,6 +29,9 @@ export default function OrganizePDF() {
   const [pages, setPages] = useState([]); 
   const [deletedHistory, setDeletedHistory] = useState([]); // Stack of deleted IDs
   const [selectionMode, setSelectionMode] = useState(false);
+
+  // Use the new shared thumbnail hook
+  const { thumbnails, totalPages } = usePDFThumbnails(inputFiles[0], { scale: 0.25, maxPages: 50 });
 
   useEffect(() => {
     return () => {
@@ -393,7 +242,7 @@ export default function OrganizePDF() {
               </div>
 
               {/* Toolbar */}
-              {pdfDocProxy && (
+              {totalPages > 0 && (
                 <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-white border border-muted/20 rounded-lg shadow-sm">
                   
                   <div className="flex items-center gap-2">
@@ -441,23 +290,76 @@ export default function OrganizePDF() {
               )}
 
               {/* Thumbnails Grid */}
-              {pdfDocProxy && (
+              {totalPages > 0 && (
                 <div className="bg-muted/5 border border-muted/20 rounded-xl p-4 sm:p-6 max-h-[500px] overflow-y-auto custom-scrollbar shadow-inner">
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {pages.map((item, idx) => (
-                      <PageThumbnail 
-                        key={item.id}
-                        item={item}
-                        index={idx}
-                        total={pages.length}
-                        selectionMode={selectionMode}
-                        onToggleSelect={toggleSelect}
-                        onDelete={handleDelete}
-                        onMoveLeft={moveLeft}
-                        onMoveRight={moveRight}
-                        pdfDoc={pdfDocProxy}
-                      />
-                    ))}
+                    {pages.map((item, idx) => {
+                      const isDeleted = item.deleted;
+                      const isSelected = item.selected;
+                      
+                      const deletedOverlay = isDeleted ? (
+                        <div className="absolute inset-0 bg-red-500/20 backdrop-blur-[1px] flex items-center justify-center z-10">
+                          <span className="bg-red-600 text-white text-xs px-2 py-1 rounded shadow-sm font-bold tracking-wide">
+                            Deleted
+                          </span>
+                        </div>
+                      ) : null;
+
+                      const actionOverlay = !isDeleted ? (
+                        <div className="absolute top-1 right-1 z-20">
+                          {selectionMode ? (
+                            <div className="bg-white rounded-md shadow-sm">
+                              {isSelected ? <CheckSquare className="w-5 h-5 text-primary" /> : <Square className="w-5 h-5 text-muted/50" />}
+                            </div>
+                          ) : (
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }}
+                              className="bg-white border border-red-200 text-red-500 hover:text-white hover:bg-red-500 rounded p-1 shadow-sm opacity-0 group-hover:opacity-100 transition-all"
+                              title="Delete Page"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      ) : null;
+
+                      return (
+                        <PDFThumbnail 
+                          key={item.id}
+                          src={thumbnails[item.originalIndex]}
+                          badgeText={idx + 1}
+                          isSelected={isSelected}
+                          onClick={() => selectionMode && !isDeleted && toggleSelect(item.id)}
+                          className={`group ${selectionMode && !isDeleted ? 'cursor-pointer' : ''} ${isDeleted ? 'opacity-70 grayscale border-red-200' : ''}`}
+                          imageOverlay={<>{deletedOverlay}{actionOverlay}</>}
+                        >
+                          {/* Bottom Reorder Controls */}
+                          <div className="flex items-center justify-between w-full mt-1">
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); moveLeft(idx); }} 
+                              disabled={idx === 0 || isDeleted || selectionMode}
+                              className="p-1.5 text-muted hover:text-text disabled:opacity-20 rounded hover:bg-muted/10 transition-colors"
+                              title="Move Left"
+                            >
+                              <ArrowLeft className="w-4 h-4" />
+                            </button>
+                            
+                            <span className="text-[10px] font-medium text-muted truncate px-1">
+                              (Orig: {item.originalIndex + 1})
+                            </span>
+                            
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); moveRight(idx); }} 
+                              disabled={idx === pages.length - 1 || isDeleted || selectionMode}
+                              className="p-1.5 text-muted hover:text-text disabled:opacity-20 rounded hover:bg-muted/10 transition-colors"
+                              title="Move Right"
+                            >
+                              <ArrowRight className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </PDFThumbnail>
+                      );
+                    })}
                   </div>
                 </div>
               )}
