@@ -1,1 +1,0 @@
-export default function PdfToJpg() { return <div>PDF to JPG Tool</div>; }
