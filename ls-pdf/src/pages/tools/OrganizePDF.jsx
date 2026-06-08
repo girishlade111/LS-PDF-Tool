@@ -1,0 +1,1 @@
+export default function OrganizePDF() { return <div>Organize PDF Tool</div>; }

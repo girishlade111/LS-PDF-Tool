@@ -1,0 +1,1 @@
+export default function CompressPDF() { return <div>Compress PDF Tool</div>; }

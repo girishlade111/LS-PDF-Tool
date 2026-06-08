@@ -1,0 +1,1 @@
+export default function MergePDF() { return <div>Merge PDF Tool</div>; }

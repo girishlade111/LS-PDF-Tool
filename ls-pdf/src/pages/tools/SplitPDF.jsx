@@ -1,0 +1,1 @@
+export default function SplitPDF() { return <div>Split PDF Tool</div>; }

@@ -1,0 +1,1 @@
+export default function PdfToText() { return <div>PDF to Text Tool</div>; }

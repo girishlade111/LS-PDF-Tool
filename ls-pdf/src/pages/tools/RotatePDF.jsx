@@ -1,0 +1,1 @@
+export default function RotatePDF() { return <div>Rotate PDF Tool</div>; }

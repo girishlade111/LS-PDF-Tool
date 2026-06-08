@@ -1,0 +1,1 @@
+export default function ProtectPDF() { return <div>Protect PDF Tool</div>; }

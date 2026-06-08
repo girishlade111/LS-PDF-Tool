@@ -1,0 +1,1 @@
+export default function JpgToPdf() { return <div>JPG to PDF Tool</div>; }

@@ -1,0 +1,1 @@
+export default function WatermarkPDF() { return <div>Watermark PDF Tool</div>; }
