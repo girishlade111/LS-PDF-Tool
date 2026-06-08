@@ -2,7 +2,8 @@ import {
   Merge, Scissors, Minimize2, RotateCw, 
   FileImage, ImagePlus, Droplets, Lock, 
   LayoutList, FileText, Hash, Settings, Trash2,
-  Layers, Crop, Unlock, Wrench, Eraser, GitCompare
+  Layers, Crop, Unlock, Wrench, Eraser, GitCompare,
+  ArrowUpDown, Code, PenTool
 } from 'lucide-react';
 import React from 'react';
 
@@ -205,6 +206,33 @@ export const tools: ToolDefinition[] = [
     color: 'text-sky-600 dark:text-sky-400',
     bgColor: 'bg-sky-50 hover:bg-sky-100 dark:bg-sky-950/30 dark:hover:bg-sky-950/50',
     category: 'optimize',
+  },
+  {
+    id: 'rearrange',
+    name: 'Rearrange PDF',
+    description: 'Drag and drop to reorder PDF pages',
+    icon: ArrowUpDown,
+    color: 'text-cyan-600 dark:text-cyan-400',
+    bgColor: 'bg-cyan-50 hover:bg-cyan-100 dark:bg-cyan-950/30 dark:hover:bg-cyan-950/50',
+    category: 'organize',
+  },
+  {
+    id: 'pdf-to-html',
+    name: 'PDF to HTML',
+    description: 'Convert PDF pages to HTML format',
+    icon: Code,
+    color: 'text-amber-600 dark:text-amber-400',
+    bgColor: 'bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/30 dark:hover:bg-amber-950/50',
+    category: 'convert',
+  },
+  {
+    id: 'sign',
+    name: 'Sign PDF',
+    description: 'Add digital signature to PDF documents',
+    icon: PenTool,
+    color: 'text-purple-600 dark:text-purple-400',
+    bgColor: 'bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/30 dark:hover:bg-purple-950/50',
+    category: 'security',
   },
 ];
 

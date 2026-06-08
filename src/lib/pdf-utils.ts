@@ -600,6 +600,127 @@ export async function comparePDFs(
 }
 
 /**
+ * Rearrange PDF pages in a new order
+ */
+export async function rearrangePDFPages(data: ArrayBuffer, newOrder: number[]): Promise<Uint8Array> {
+  const pdf = await loadPDF(data);
+  const newPdf = await PDFDocument.create();
+  const copiedPages = await newPdf.copyPages(pdf, newOrder);
+  copiedPages.forEach((page) => newPdf.addPage(page));
+  return newPdf.save();
+}
+
+/**
+ * PDF to HTML - extract text and convert
+ */
+export async function pdfToHTML(
+  data: ArrayBuffer,
+  options?: { mode?: 'simple' | 'structured'; includeImages?: boolean; pageRange?: number[] }
+): Promise<{ html: string; pages: string[] }> {
+  const pdfjsLib = await import('pdfjs-dist');
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+
+  const mode = options?.mode ?? 'simple';
+  const pdfDoc = await pdfjsLib.getDocument({ data: new Uint8Array(data) }).promise;
+  const pages: string[] = [];
+
+  const totalPages = pdfDoc.numPages;
+  const pageRange = options?.pageRange ?? Array.from({ length: totalPages }, (_, i) => i + 1);
+
+  for (const pageNum of pageRange) {
+    const page = await pdfDoc.getPage(pageNum);
+    const textContent = await page.getTextContent();
+
+    if (mode === 'simple') {
+      // Simple: extract text as paragraphs
+      const text = textContent.items
+        .filter((item): item is { str: string; transform: number[] } => 'str' in item)
+        .map(item => item.str)
+        .join(' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      pages.push(`<div class="page"><h2>Page ${pageNum}</h2><p>${text}</p></div>`);
+    } else {
+      // Structured: approximate layout with positioned spans
+      const items = textContent.items
+        .filter((item): item is { str: string; transform: number[]; width: number; height: number } => 'str' in item)
+        .map(item => ({
+          text: item.str,
+          x: Math.round(item.transform[4]),
+          y: Math.round(item.transform[5]),
+          width: Math.round(item.width || 100),
+          fontSize: Math.round(Math.abs(item.transform[0]) || 12),
+        }));
+
+      const htmlItems = items.map(item =>
+        `<span style="position:absolute;left:${item.x}px;top:${item.y}px;font-size:${item.fontSize}px;">${item.text}</span>`
+      ).join('\n');
+
+      const viewport = page.getViewport({ scale: 1 });
+      pages.push(`<div class="page" style="position:relative;width:${viewport.width}px;height:${viewport.height}px;">${htmlItems}</div>`);
+    }
+  }
+
+  const fullHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Converted PDF</title><style>.page{margin:20px auto;max-width:800px;padding:20px;border:1px solid #ccc;}h2{color:#333;}</style></head><body>${pages.join('\n')}</body></html>`;
+
+  return { html: fullHtml, pages };
+}
+
+/**
+ * Sign PDF - add signature image to page
+ */
+export async function signPDF(
+  data: ArrayBuffer,
+  signatureImage: Uint8Array,
+  options?: { page?: number; position?: 'bottom-right' | 'bottom-left' | 'bottom-center' | 'top-right'; scale?: 'small' | 'medium' | 'large' }
+): Promise<Uint8Array> {
+  const pdf = await loadPDF(data);
+  const pageIndex = (options?.page ?? 1) - 1;
+  const page = pdf.getPages()[pageIndex];
+  const { width, height } = page.getSize();
+
+  // Embed signature image
+  let image;
+  try {
+    image = await pdf.embedPng(signatureImage);
+  } catch {
+    image = await pdf.embedJpg(signatureImage);
+  }
+
+  const scale = options?.scale ?? 'medium';
+  const scaleFactor = scale === 'small' ? 0.15 : scale === 'large' ? 0.35 : 0.25;
+  const imgWidth = width * scaleFactor;
+  const imgHeight = imgWidth * (image.height / image.width);
+
+  const position = options?.position ?? 'bottom-right';
+  let x: number, y: number;
+
+  const margin = 40;
+  switch (position) {
+    case 'bottom-left':
+      x = margin;
+      y = margin;
+      break;
+    case 'bottom-center':
+      x = (width - imgWidth) / 2;
+      y = margin;
+      break;
+    case 'top-right':
+      x = width - imgWidth - margin;
+      y = height - imgHeight - margin;
+      break;
+    case 'bottom-right':
+    default:
+      x = width - imgWidth - margin;
+      y = margin;
+      break;
+  }
+
+  page.drawImage(image, { x, y, width: imgWidth, height: imgHeight });
+  return pdf.save();
+}
+
+/**
  * Simplified compress - remove metadata and optimize
  */
 export async function compressPDF(

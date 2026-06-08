@@ -22,10 +22,14 @@ import {
   Star,
   Search,
   Command,
+  Gift,
+  ArrowRightLeft,
+  Mail,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { useNavStore } from '@/store/nav-store';
 import { useFileStore } from '@/store/file-store';
 import { tools, categories, getToolById } from '@/lib/tools';
@@ -33,6 +37,7 @@ import { Separator } from '@/components/ui/separator';
 import { ErrorBoundary } from '@/components/shared/error-boundary';
 import { RecentHistory } from '@/components/shared/recent-history';
 import { ThemeToggle } from '@/components/shared/theme-toggle';
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 
 // Lazy load tool components
 const MergePDFTool = lazy(() =>
@@ -98,6 +103,15 @@ const RedactPDFTool = lazy(() =>
 const ComparePDFTool = lazy(() =>
   import('@/tools/compare-pdf').then((m) => ({ default: m.ComparePDFTool }))
 );
+const RearrangePDFTool = lazy(() =>
+  import('@/tools/rearrange-pdf').then((m) => ({ default: m.RearrangePDFTool }))
+);
+const PDFToHTMLTool = lazy(() =>
+  import('@/tools/pdf-to-html').then((m) => ({ default: m.PDFToHTMLTool }))
+);
+const SignPDFTool = lazy(() =>
+  import('@/tools/sign-pdf').then((m) => ({ default: m.SignPDFTool }))
+);
 
 const toolComponents: Record<string, React.LazyExoticComponent<React.ComponentType>> = {
   merge: MergePDFTool,
@@ -121,6 +135,9 @@ const toolComponents: Record<string, React.LazyExoticComponent<React.ComponentTy
   'repair': RepairPDFTool,
   'redact': RedactPDFTool,
   'compare': ComparePDFTool,
+  'rearrange': RearrangePDFTool,
+  'pdf-to-html': PDFToHTMLTool,
+  'sign': SignPDFTool,
 };
 
 function ToolLoader() {
@@ -315,6 +332,31 @@ function Footer() {
 
   return (
     <footer className="mt-auto border-t bg-muted/30">
+      {/* Newsletter strip */}
+      <div className="bg-gradient-to-r from-red-500/5 via-orange-500/5 to-amber-500/5 dark:from-red-500/10 dark:via-orange-500/10 dark:to-amber-500/10 border-b">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 py-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-center sm:text-left">
+              <div className="flex items-center justify-center sm:justify-start gap-2 mb-1">
+                <Mail className="h-4 w-4 text-red-500" />
+                <h4 className="font-semibold text-sm">Stay Updated</h4>
+              </div>
+              <p className="text-xs text-muted-foreground max-w-sm">Get tips on PDF management and be the first to know about new tools.</p>
+            </div>
+            <div className="flex w-full sm:w-auto gap-2">
+              <Input
+                type="email"
+                placeholder="Enter your email"
+                className="h-9 text-sm max-w-[240px] bg-background/80"
+              />
+              <Button size="sm" className="bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white shrink-0">
+                Subscribe
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="mx-auto max-w-6xl px-4 sm:px-6 py-8">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           <div className="space-y-3">
@@ -451,7 +493,7 @@ function HowItWorksSection() {
     {
       number: 2,
       title: 'Choose Your Tool',
-      description: 'Select from 20+ tools: merge, split, compress, rotate, watermark, and more.',
+      description: 'Select from 24+ tools: merge, split, compress, rotate, watermark, and more.',
       icon: Wrench,
     },
     {
@@ -474,10 +516,14 @@ function HowItWorksSection() {
           const Icon = step.icon;
           return (
             <React.Fragment key={step.number}>
-              {/* Connecting dotted line between steps (visible on sm+) */}
+              {/* Connecting arrow between steps (visible on sm+) */}
               {index > 0 && (
                 <div className="hidden sm:flex items-center absolute top-1/2 -translate-y-1/2 z-0" style={{ left: `${(index * 50) + 8}%`, width: '34%' }}>
-                  <div className="w-full border-t-2 border-dashed border-red-300 dark:border-red-700/50" />
+                  <div className="w-full border-t-2 border-red-300 dark:border-red-700/50 relative">
+                    <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1">
+                      <ArrowRight className="h-3.5 w-3.5 text-red-400 dark:text-red-600/70" />
+                    </div>
+                  </div>
                 </div>
               )}
               <div
@@ -486,16 +532,18 @@ function HowItWorksSection() {
                 }`}
                 style={{ transitionDelay: `${index * 150}ms` }}
               >
+                {/* Glow effect behind step number */}
+                <div className="absolute -top-2 left-1/2 -translate-x-1/2 h-20 w-20 rounded-full bg-gradient-to-br from-red-500/20 to-orange-500/20 blur-xl" />
                 {/* Gradient number circle */}
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-red-500 to-orange-500 text-white text-2xl font-bold shadow-lg shadow-red-500/20 mb-4">
+                <div className="relative flex h-18 w-18 items-center justify-center rounded-full bg-gradient-to-br from-red-500 to-orange-500 text-white text-3xl font-bold shadow-lg shadow-red-500/20 mb-4">
                   {step.number}
                 </div>
                 {/* Icon below the number */}
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted/50 dark:bg-muted/30 mb-3">
                   <Icon className="h-5 w-5 text-red-500 dark:text-orange-400" />
                 </div>
-                <h3 className="font-semibold text-base mb-1.5">{step.title}</h3>
-                <p className="text-sm text-muted-foreground max-w-[240px]">{step.description}</p>
+                <h3 className="font-semibold text-lg mb-2">{step.title}</h3>
+                <p className="text-sm sm:text-base text-muted-foreground max-w-[280px]">{step.description}</p>
               </div>
             </React.Fragment>
           );
@@ -507,10 +555,11 @@ function HowItWorksSection() {
 
 // ─── Stats Section ────────────────────────────────────────────────────────────
 
-function StatItem({ target, suffix, label, startAnimating }: {
+function StatItem({ target, suffix, label, icon: Icon, startAnimating }: {
   target: number;
   suffix: string;
   label: string;
+  icon: React.ElementType;
   startAnimating: boolean;
 }) {
   const [count, setCount] = useState(0);
@@ -535,8 +584,11 @@ function StatItem({ target, suffix, label, startAnimating }: {
 
   return (
     <div className="text-center flex-1">
-      <div className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent">
-        {count}{suffix}
+      <div className="flex items-center justify-center gap-2 mb-1">
+        <Icon className="h-5 w-5 text-red-500/70 dark:text-orange-400/70" />
+        <div className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent">
+          {count}{suffix}
+        </div>
       </div>
       <div className="text-sm text-muted-foreground mt-1">{label}</div>
     </div>
@@ -563,22 +615,31 @@ function StatsSection() {
   }, []);
 
   const statDefs = [
-    { target: 21, suffix: '+', label: 'PDF Tools' },
-    { target: 100, suffix: '%', label: 'Free Forever' },
-    { target: 0, suffix: '', label: 'Data Uploads' },
-    { target: 50, suffix: 'K+', label: 'Happy Users' },
+    { target: 24, suffix: '+', label: 'PDF Tools', icon: Wrench },
+    { target: 100, suffix: '%', label: 'Free Forever', icon: Gift },
+    { target: 0, suffix: '', label: 'Data Uploads', icon: Shield },
+    { target: 50, suffix: 'K+', label: 'Happy Users', icon: Users },
   ];
 
   return (
     <section ref={sectionRef} className="mx-auto max-w-6xl px-4 sm:px-6 pb-16">
-      <div className="rounded-2xl border bg-card p-6 sm:p-8 shadow-sm">
-        <div className="flex flex-col sm:flex-row items-center justify-around gap-6 sm:gap-0">
+      <div className="rounded-2xl border bg-card p-6 sm:p-8 shadow-sm relative overflow-hidden before:absolute before:inset-0 before:rounded-2xl before:p-[1px] before:bg-gradient-to-br before:from-red-500/20 before:via-orange-500/10 before:to-amber-500/20 before:-z-10 before:pointer-events-none">
+        {/* Subtle background pattern */}
+        <div
+          className="absolute inset-0 opacity-[0.02] dark:opacity-[0.04]"
+          style={{
+            backgroundImage: 'radial-gradient(circle, currentColor 1px, transparent 1px)',
+            backgroundSize: '20px 20px',
+          }}
+        />
+        <div className="flex flex-col sm:flex-row items-center justify-around gap-6 sm:gap-0 relative">
           {statDefs.map((stat, index) => (
             <React.Fragment key={stat.label}>
               <StatItem
                 target={stat.target}
                 suffix={stat.suffix}
                 label={stat.label}
+                icon={stat.icon}
                 startAnimating={isVisible}
               />
               {index < statDefs.length - 1 && (
@@ -794,7 +855,7 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
       />
 
       {/* Dialog */}
-      <div className="fixed left-1/2 top-[15%] -translate-x-1/2 z-[101] w-full max-w-lg">
+      <div className="fixed left-1/2 top-[5%] sm:top-[15%] -translate-x-1/2 z-[101] w-full max-w-full sm:max-w-lg">
         <div className="mx-4 rounded-xl border bg-card shadow-2xl animate-in fade-in slide-in-from-top-4 duration-200 overflow-hidden">
           {/* Search input */}
           <div className="flex items-center gap-3 border-b px-4 py-3">
@@ -1067,6 +1128,25 @@ function HeroSection() {
 function ToolsGrid() {
   const { navigate } = useNavStore();
   const { selectedCategory, setSelectedCategory } = React.useContext(CategoryFilterContext);
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        return !localStorage.getItem('pdf-tools-onboarding-dismissed');
+      } catch {
+        return false;
+      }
+    }
+    return false;
+  });
+
+  const dismissOnboarding = useCallback(() => {
+    setShowOnboarding(false);
+    try {
+      localStorage.setItem('pdf-tools-onboarding-dismissed', 'true');
+    } catch {
+      // ignore
+    }
+  }, []);
 
   const activeCategories = selectedCategory
     ? categories.filter((c) => c.id === selectedCategory)
@@ -1074,6 +1154,22 @@ function ToolsGrid() {
 
   return (
     <section id="tools-grid" className="mx-auto max-w-6xl px-4 sm:px-6 pb-16">
+      {/* Onboarding banner for first-time users */}
+      {showOnboarding && (
+        <div className="mb-6 flex items-center gap-3 rounded-lg bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border border-amber-200/50 dark:border-amber-800/30 p-3 sm:p-4 animate-in fade-in slide-in-from-top-2 duration-300">
+          <span className="text-lg shrink-0">👋</span>
+          <p className="text-sm text-amber-800 dark:text-amber-200 flex-1">
+            <span className="font-medium">New here?</span> Start with <strong>Merge PDF</strong> to combine multiple files, or use <strong>Compress PDF</strong> to reduce file size.
+          </p>
+          <button
+            onClick={dismissOnboarding}
+            className="shrink-0 p-1 rounded-md hover:bg-amber-200/50 dark:hover:bg-amber-800/30 transition-colors"
+            aria-label="Dismiss banner"
+          >
+            <X className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+          </button>
+        </div>
+      )}
       {/* Active filter indicator */}
       {selectedCategory && (
         <div className="flex items-center gap-2 mb-4">
@@ -1108,7 +1204,7 @@ function ToolsGrid() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 transition-all duration-500">
               {categoryTools.map((tool) => {
                 const Icon = tool.icon;
-                const isNewTool = ['flatten', 'crop-pdf', 'unlock', 'repair', 'redact', 'compare'].includes(tool.id);
+                const isNewTool = ['flatten', 'crop-pdf', 'unlock', 'repair', 'redact', 'compare', 'rearrange', 'pdf-to-html', 'sign'].includes(tool.id);
                 const categoryLabel = categories.find((c) => c.id === tool.category)?.name || tool.category;
                 return (
                   <a
@@ -1116,7 +1212,11 @@ function ToolsGrid() {
                     href={`#${tool.id}`}
                     className="block no-underline"
                   >
-                    <Card className="group cursor-pointer transition-all duration-300 hover:shadow-lg hover:-translate-y-1 hover:shadow-primary/5 border-muted relative overflow-hidden before:absolute before:inset-0 before:rounded-lg before:p-[1px] before:bg-gradient-to-br before:from-red-500/0 before:via-orange-500/0 before:to-amber-500/0 hover:before:from-red-500/30 hover:before:via-orange-500/20 hover:before:to-amber-500/30 before:transition-all before:duration-500 before:-z-10 before:pointer-events-none">
+                    <Card className="group cursor-pointer transition-all duration-300 hover:shadow-lg hover:-translate-y-1 hover:shadow-primary/5 border-border/60 relative overflow-hidden before:absolute before:inset-0 before:rounded-lg before:p-[1px] before:bg-gradient-to-br before:from-red-500/0 before:via-orange-500/0 before:to-amber-500/0 hover:before:from-red-500/30 hover:before:via-orange-500/20 hover:before:to-amber-500/30 before:transition-all before:duration-500 before:-z-10 before:pointer-events-none shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)] active:scale-[0.98] h-full">
+                      {/* Colored left border */}
+                      <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-lg ${tool.bgColor} opacity-60 group-hover:opacity-100 transition-opacity duration-300`} />
+                      {/* Gradient background */}
+                      <div className="absolute inset-0 bg-gradient-to-br from-card to-muted/10" />
                       {/* Gradient overlay on hover */}
                       <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                       {/* Category badge at top-right */}
@@ -1135,7 +1235,7 @@ function ToolsGrid() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-2">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <h3 className="font-semibold text-sm relative">
+                                <h3 className="font-semibold text-base relative">
                                   {tool.name}
                                   {/* Animated underline on hover */}
                                   <span className="absolute -bottom-0.5 left-0 h-0.5 w-0 bg-gradient-to-r from-red-500 to-orange-500 group-hover:w-full transition-all duration-300" />
@@ -1291,7 +1391,7 @@ function HomePage() {
               <p className="text-sm text-muted-foreground">
                 Use on any device with a modern browser. Desktop, tablet, or mobile.
               </p>
-              <WhyChooseCounter target={21} suffix="+ Tools" />
+              <WhyChooseCounter target={24} suffix="+ Tools" />
             </div>
           </div>
         </div>
@@ -1299,7 +1399,64 @@ function HomePage() {
 
       <StatsSection />
       <TestimonialsSection />
+      <FAQSection />
     </>
+  );
+}
+
+// ─── FAQ Section ──────────────────────────────────────────────────────────────
+
+function FAQSection() {
+  const faqs = [
+    {
+      question: 'Is it safe to upload my PDF files?',
+      answer: 'Yes! All processing happens in your browser. Your files never leave your device.',
+    },
+    {
+      question: 'Do I need to create an account?',
+      answer: 'No registration required. Just open a tool and start working.',
+    },
+    {
+      question: "What's the maximum file size?",
+      answer: 'We support files up to 100MB. For best performance, we recommend files under 50MB.',
+    },
+    {
+      question: 'Can I use PDF Tools on my phone?',
+      answer: 'Yes! PDF Tools works on any device with a modern browser.',
+    },
+    {
+      question: 'Is there a limit on how many files I can process?',
+      answer: 'No limits! Process as many files as you need, completely free.',
+    },
+    {
+      question: 'What PDF operations are supported?',
+      answer: 'We support 20+ operations including merge, split, compress, rotate, watermark, and more.',
+    },
+  ];
+
+  return (
+    <section className="bg-muted/20 py-12 sm:py-16">
+      <div className="mx-auto max-w-3xl px-4 sm:px-6">
+        <div className="text-center mb-8">
+          <h2 className="text-2xl font-bold">Frequently Asked Questions</h2>
+          <p className="text-muted-foreground mt-2">Everything you need to know about PDF Tools</p>
+        </div>
+        <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+          <Accordion type="single" collapsible className="px-4 sm:px-6">
+            {faqs.map((faq, index) => (
+              <AccordionItem key={index} value={`faq-${index}`}>
+                <AccordionTrigger className="text-left text-sm sm:text-base font-medium hover:no-underline">
+                  {faq.question}
+                </AccordionTrigger>
+                <AccordionContent className="text-sm text-muted-foreground leading-relaxed">
+                  {faq.answer}
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        </div>
+      </div>
+    </section>
   );
 }
 

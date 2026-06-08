@@ -21,7 +21,10 @@ export type ToolId =
   | 'unlock'
   | 'repair'
   | 'redact'
-  | 'compare';
+  | 'compare'
+  | 'rearrange'
+  | 'pdf-to-html'
+  | 'sign';
 
 interface NavStore {
   currentPage: 'home' | ToolId;
