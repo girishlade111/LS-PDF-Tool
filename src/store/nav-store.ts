@@ -24,7 +24,10 @@ export type ToolId =
   | 'compare'
   | 'rearrange'
   | 'pdf-to-html'
-  | 'sign';
+  | 'sign'
+  | 'pdf-to-markdown'
+  | 'ocr-pdf'
+  | 'summarize-pdf';
 
 interface NavStore {
   currentPage: 'home' | ToolId;

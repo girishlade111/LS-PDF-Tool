@@ -3,7 +3,7 @@ import {
   FileImage, ImagePlus, Droplets, Lock, 
   LayoutList, FileText, Hash, Settings, Trash2,
   Layers, Crop, Unlock, Wrench, Eraser, GitCompare,
-  ArrowUpDown, Code, PenTool
+  ArrowUpDown, Code, PenTool, Sparkles, Brain
 } from 'lucide-react';
 import React from 'react';
 
@@ -233,6 +233,33 @@ export const tools: ToolDefinition[] = [
     color: 'text-purple-600 dark:text-purple-400',
     bgColor: 'bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/30 dark:hover:bg-purple-950/50',
     category: 'security',
+  },
+  {
+    id: 'pdf-to-markdown',
+    name: 'PDF to Markdown',
+    description: 'AI-powered conversion of PDF to Markdown format',
+    icon: FileText,
+    color: 'text-teal-600 dark:text-teal-400',
+    bgColor: 'bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/30 dark:hover:bg-teal-950/50',
+    category: 'convert',
+  },
+  {
+    id: 'ocr-pdf',
+    name: 'OCR PDF',
+    description: 'AI-powered text extraction from scanned PDFs',
+    icon: Sparkles,
+    color: 'text-violet-600 dark:text-violet-400',
+    bgColor: 'bg-violet-50 hover:bg-violet-100 dark:bg-violet-950/30 dark:hover:bg-violet-950/50',
+    category: 'convert',
+  },
+  {
+    id: 'summarize-pdf',
+    name: 'Summarize PDF',
+    description: 'AI-powered PDF document summarization',
+    icon: Brain,
+    color: 'text-amber-600 dark:text-amber-400',
+    bgColor: 'bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/30 dark:hover:bg-amber-950/50',
+    category: 'optimize',
   },
 ];
 

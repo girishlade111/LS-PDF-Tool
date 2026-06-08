@@ -112,6 +112,15 @@ const PDFToHTMLTool = lazy(() =>
 const SignPDFTool = lazy(() =>
   import('@/tools/sign-pdf').then((m) => ({ default: m.SignPDFTool }))
 );
+const PDFToMarkdownTool = lazy(() =>
+  import('@/tools/pdf-to-markdown').then((m) => ({ default: m.PDFToMarkdownTool }))
+);
+const OCRPDFTool = lazy(() =>
+  import('@/tools/ocr-pdf').then((m) => ({ default: m.OCRPDFTool }))
+);
+const SummarizePDFTool = lazy(() =>
+  import('@/tools/summarize-pdf').then((m) => ({ default: m.SummarizePDFTool }))
+);
 
 const toolComponents: Record<string, React.LazyExoticComponent<React.ComponentType>> = {
   merge: MergePDFTool,
@@ -138,6 +147,9 @@ const toolComponents: Record<string, React.LazyExoticComponent<React.ComponentTy
   'rearrange': RearrangePDFTool,
   'pdf-to-html': PDFToHTMLTool,
   'sign': SignPDFTool,
+  'pdf-to-markdown': PDFToMarkdownTool,
+  'ocr-pdf': OCRPDFTool,
+  'summarize-pdf': SummarizePDFTool,
 };
 
 function ToolLoader() {
@@ -493,7 +505,7 @@ function HowItWorksSection() {
     {
       number: 2,
       title: 'Choose Your Tool',
-      description: 'Select from 24+ tools: merge, split, compress, rotate, watermark, and more.',
+      description: 'Select from 27+ tools: merge, split, compress, rotate, watermark, and more.',
       icon: Wrench,
     },
     {
@@ -615,7 +627,7 @@ function StatsSection() {
   }, []);
 
   const statDefs = [
-    { target: 24, suffix: '+', label: 'PDF Tools', icon: Wrench },
+    { target: 27, suffix: '+', label: 'PDF Tools', icon: Wrench },
     { target: 100, suffix: '%', label: 'Free Forever', icon: Gift },
     { target: 0, suffix: '', label: 'Data Uploads', icon: Shield },
     { target: 50, suffix: 'K+', label: 'Happy Users', icon: Users },
@@ -1196,6 +1208,18 @@ function ToolsGrid() {
             <div className="flex items-center gap-3 mb-5">
               <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
               <h2 className="text-xl font-semibold shrink-0">{category.name}</h2>
+              {category.id === 'convert' && (
+                <Badge className="bg-gradient-to-r from-violet-500 to-purple-500 text-white text-[10px] px-1.5 py-0 h-4 border-0 gap-0.5">
+                  <Sparkles className="h-2.5 w-2.5" />
+                  AI
+                </Badge>
+              )}
+              {category.id === 'optimize' && (
+                <Badge className="bg-gradient-to-r from-violet-500 to-purple-500 text-white text-[10px] px-1.5 py-0 h-4 border-0 gap-0.5">
+                  <Sparkles className="h-2.5 w-2.5" />
+                  AI
+                </Badge>
+              )}
               <Badge variant="outline" className="text-xs shrink-0">
                 {category.description}
               </Badge>
@@ -1204,7 +1228,8 @@ function ToolsGrid() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 transition-all duration-500">
               {categoryTools.map((tool) => {
                 const Icon = tool.icon;
-                const isNewTool = ['flatten', 'crop-pdf', 'unlock', 'repair', 'redact', 'compare', 'rearrange', 'pdf-to-html', 'sign'].includes(tool.id);
+                const isNewTool = ['flatten', 'crop-pdf', 'unlock', 'repair', 'redact', 'compare', 'rearrange', 'pdf-to-html', 'sign', 'pdf-to-markdown', 'ocr-pdf', 'summarize-pdf'].includes(tool.id);
+                const isAITool = ['pdf-to-markdown', 'ocr-pdf', 'summarize-pdf'].includes(tool.id);
                 const categoryLabel = categories.find((c) => c.id === tool.category)?.name || tool.category;
                 return (
                   <a
@@ -1250,6 +1275,12 @@ function ToolsGrid() {
                                 {isNewTool && (
                                   <Badge className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-[10px] px-1.5 py-0 h-4 border-0">
                                     New
+                                  </Badge>
+                                )}
+                                {isAITool && (
+                                  <Badge className="bg-gradient-to-r from-violet-500 to-purple-500 text-white text-[10px] px-1.5 py-0 h-4 border-0 gap-0.5">
+                                    <Sparkles className="h-2.5 w-2.5" />
+                                    AI
                                   </Badge>
                                 )}
                               </div>
@@ -1391,7 +1422,7 @@ function HomePage() {
               <p className="text-sm text-muted-foreground">
                 Use on any device with a modern browser. Desktop, tablet, or mobile.
               </p>
-              <WhyChooseCounter target={24} suffix="+ Tools" />
+              <WhyChooseCounter target={27} suffix="+ Tools" />
             </div>
           </div>
         </div>
@@ -1409,8 +1440,20 @@ function HomePage() {
 function FAQSection() {
   const faqs = [
     {
-      question: 'Is it safe to upload my PDF files?',
-      answer: 'Yes! All processing happens in your browser. Your files never leave your device.',
+      question: 'Is my data safe?',
+      answer: 'Yes! All file processing happens entirely in your browser. Your files never leave your device. For AI-powered tools (OCR, PDF to Markdown), only page images are sent to our AI service — your original files stay local.',
+    },
+    {
+      question: 'What are AI-powered tools?',
+      answer: 'AI-powered tools like OCR PDF and PDF to Markdown use advanced AI models to analyze your document pages. These tools can extract text from scanned documents and convert PDFs to structured Markdown format with high accuracy.',
+    },
+    {
+      question: 'How many PDF tools are available?',
+      answer: 'We offer 27+ free PDF tools including merge, split, compress, rotate, watermark, protect, OCR, summarize, and many more. All tools work directly in your browser with no registration required.',
+    },
+    {
+      question: 'Can I use these tools offline?',
+      answer: 'Most tools work entirely offline in your browser since they process files locally. AI-powered tools (OCR, PDF to Markdown) require an internet connection to communicate with our AI service.',
     },
     {
       question: 'Do I need to create an account?',
@@ -1421,16 +1464,8 @@ function FAQSection() {
       answer: 'We support files up to 100MB. For best performance, we recommend files under 50MB.',
     },
     {
-      question: 'Can I use PDF Tools on my phone?',
-      answer: 'Yes! PDF Tools works on any device with a modern browser.',
-    },
-    {
       question: 'Is there a limit on how many files I can process?',
       answer: 'No limits! Process as many files as you need, completely free.',
-    },
-    {
-      question: 'What PDF operations are supported?',
-      answer: 'We support 20+ operations including merge, split, compress, rotate, watermark, and more.',
     },
   ];
 

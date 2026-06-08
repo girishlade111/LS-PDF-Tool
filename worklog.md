@@ -826,3 +826,195 @@ Priority recommendations for next phase:
 - Improve mobile responsiveness for complex tool controls
 - Add dark/light mode animation transitions
 - Consider adding PDF annotation/drawing tool
+
+---
+Task ID: 4
+Agent: ai-tools-adder
+Task: Add 2 AI-powered PDF tools (PDF to Markdown, OCR PDF) with backend API
+
+Work Log:
+- Created API route /api/pdf-to-markdown/route.ts
+  - POST endpoint accepting base64-encoded page images and page numbers
+  - Uses z-ai-web-dev-sdk VLM (Vision Language Model) to convert each page image to Markdown
+  - Sequential processing (one page at a time) to avoid overloading AI service
+  - Prompt: "Convert this document page to clean Markdown format. Preserve headings, lists, tables, and formatting."
+  - Returns { pages: { pageNumber: number, markdown: string }[] }
+  - Graceful error handling per page (failed pages return error message in markdown blockquote)
+- Created API route /api/ocr-pdf/route.ts
+  - POST endpoint similar to pdf-to-markdown but for OCR text extraction
+  - Uses VLM to extract text from scanned document images
+  - Supports language parameter (auto-detect or specific language hint in prompt)
+  - Prompt: "Extract all text from this document image. Preserve the layout, paragraphs, and formatting."
+  - Returns { pages: { pageNumber: number, text: string }[] }
+- Created PDF to Markdown tool - /home/z/my-project/src/tools/pdf-to-markdown.tsx
+  - Tool ID: 'pdf-to-markdown', Icon: FileText, Color: teal, Category: convert
+  - AI-Powered badge with Sparkles icon
+  - Quality selector: Standard (1x scale) / High (2x scale) with visual cards
+  - Page range input supporting "all", "1,3,5-8" format with parsePageRange helper
+  - Processing: renders PDF pages as JPEG → sends each to API sequentially → collects results
+  - Progress bar with percentage and descriptive messages during rendering and AI processing
+  - Results view with Preview/Source toggle (ReactMarkdown for preview, raw markdown for source)
+  - Copy to clipboard button with Check icon feedback
+  - Download as .md file button
+  - "Convert Another" reset button
+  - ScrollArea with per-page results and page number badges
+- Created OCR PDF tool - /home/z/my-project/src/tools/ocr-pdf.tsx
+  - Tool ID: 'ocr-pdf', Icon: Sparkles, Color: violet, Category: convert
+  - AI-Powered badge with Sparkles icon
+  - Language selector: Auto-detect, English, Spanish, French, German, Chinese, Japanese (pill buttons)
+  - Quality selector: Standard (1x) / High (2x) with visual cards
+  - Page range input with same parsePageRange helper
+  - Processing: same flow as PDF to Markdown but calls /api/ocr-pdf endpoint
+  - Stats bar: word count, character count, page count
+  - Copy to clipboard button with feedback
+  - Download as TXT button
+  - Scrollable textarea for extracted text
+  - "OCR Another" reset button
+- Updated tool definitions - /home/z/my-project/src/lib/tools.ts
+  - Added Sparkles import from lucide-react
+  - Added 'pdf-to-markdown' tool (teal color, convert category, FileText icon)
+  - Added 'ocr-pdf' tool (violet color, convert category, Sparkles icon)
+- Updated nav-store - /home/z/my-project/src/store/nav-store.ts
+  - Added 'pdf-to-markdown' and 'ocr-pdf' to ToolId union type
+- Updated page.tsx - /home/z/my-project/src/app/page.tsx
+  - Added lazy imports for PDFToMarkdownTool and OCRPDFTool
+  - Added both to toolComponents record
+- Lint passes with 0 errors
+- Dev server compiles and serves successfully (HTTP 200)
+
+Stage Summary:
+- 2 new AI-powered PDF tools added, bringing total from 24 to 26
+- PDF to Markdown: AI-powered VLM conversion of PDF pages to Markdown with quality options, page range, preview/source toggle, copy & download
+- OCR PDF: AI-powered VLM text extraction from scanned PDFs with language selection, quality options, page range, word/char stats, copy & download
+- Both tools use backend API routes with z-ai-web-dev-sdk VLM for AI processing
+- Backend processes pages sequentially to avoid overloading the AI service
+- All supporting files updated consistently (tools.ts, nav-store.ts, page.tsx)
+- Clean lint and successful compilation
+
+---
+Task ID: 6
+Agent: ui-polish
+Task: Enhance homepage styling, update badges, and polish UI
+
+Work Log:
+- Updated statDefs in StatsSection: changed PDF Tools target from 24 to 26
+- Updated HowItWorksSection description: changed "24+" to "26+"
+- Updated WhyChooseCounter: changed "Works Everywhere" card from 24 to 26
+- Updated isNewTool logic: added 'pdf-to-markdown' and 'ocr-pdf' to the isNewTool array
+- Added isAITool logic: new variable for ['pdf-to-markdown', 'ocr-pdf']
+- Added AI badge (violet-to-purple gradient with Sparkles icon) after the existing New badge for AI tools
+- Added AI-Powered badge to Convert category section header (next to category name, before description badge)
+- Updated FAQSection: replaced 6 FAQs with 7 updated ones including AI-specific questions:
+  - "Is my data safe?" - covers both browser-based and AI-powered tool privacy
+  - "What are AI-powered tools?" - explains OCR and PDF to Markdown AI features
+  - "How many PDF tools are available?" - updated to 26+
+  - "Can I use these tools offline?" - clarifies AI tools need internet
+  - Retained "Do I need to create an account?" and "What's the maximum file size?" and "Is there a limit?"
+- Lint passes with zero errors
+- Dev server compiles successfully
+
+Stage Summary:
+- All 6 task items completed successfully
+- Tool count updated from 24 to 26 across all homepage sections (Stats, How It Works, Why Choose)
+- New AI badge (violet/purple gradient with Sparkles icon) added to AI-powered tool cards (pdf-to-markdown, ocr-pdf)
+- AI badge also added to Convert category section header
+- FAQ section refreshed with AI-relevant questions and 26+ tool count
+- Zero lint errors, dev server compiling successfully
+
+---
+Task ID: 7
+Agent: summarize-pdf-agent
+Task: Add AI PDF Summarizer Tool
+
+Work Log:
+- Created backend API route - /home/z/my-project/src/app/api/summarize-pdf/route.ts
+  - Next.js API route accepting POST with base64-encoded page images
+  - Uses z-ai-web-dev-sdk VLM (createVision) for per-page summarization
+  - Three summary type prompts: brief (2-3 sentences), detailed (comprehensive), key-points (numbered list)
+  - Uses LLM (zai.chat.completions.create) to combine per-page summaries into cohesive document summary
+  - Processes pages sequentially to avoid overloading the AI service
+  - Graceful error handling: individual page errors captured, combination step falls back to per-page text
+  - Returns { summary: string, pageSummaries: { pageNumber: number, summary: string }[] }
+- Created frontend tool component - /home/z/my-project/src/tools/summarize-pdf.tsx
+  - Tool ID: 'summarize-pdf', Brain icon, amber/orange color scheme
+  - Single file upload only (maxFiles={1})
+  - Summary type selector with 3 styled card options (Briefcase/FileText/List icons)
+  - Quality selector: Standard (1x) and High (2x) rendering quality
+  - Page range input supporting "all" and "1,3,5-8" syntax
+  - Processing flow: render PDF pages as JPEG → convert to base64 → POST to /api/summarize-pdf → display results
+  - AI-Powered badge with Sparkles icon (amber/orange gradient style)
+  - Combined summary displayed prominently in gradient-bordered card
+  - Per-page summaries in collapsible Accordion component
+  - Copy to clipboard button with feedback
+  - Download summary as TXT file
+  - Word count display
+  - Progress bar during processing
+  - Dark mode support with proper dark: variants
+  - Proper loading states and error handling
+- Updated tool definitions - /home/z/my-project/src/lib/tools.ts
+  - Added Brain import from lucide-react
+  - Added 'summarize-pdf' tool (amber color, optimize category, Brain icon)
+- Updated nav-store - /home/z/my-project/src/store/nav-store.ts
+  - Added 'summarize-pdf' to ToolId union type
+- Updated page.tsx - /home/z/my-project/src/app/page.tsx
+  - Added lazy import for SummarizePDFTool
+  - Added to toolComponents record
+- Lint passes with 0 errors
+- Dev server compiles successfully
+
+Stage Summary:
+- New AI-powered PDF Summarizer tool added, bringing total to 28 tools
+- Backend API uses VLM for page-level analysis + LLM for cohesive document summary
+- Three summary modes: Brief, Detailed, Key Points
+- Full-featured frontend with quality selection, page range, progress tracking, copy/download
+- Gradient-bordered summary display card with per-page accordion
+- All supporting files updated consistently (tools.ts, nav-store.ts, page.tsx)
+- Clean lint and successful compilation
+
+---
+Task ID: cron-review-5
+Agent: main-orchestrator
+Task: QA review, AI-powered tools, styling enhancements, new features
+
+Work Log:
+- Read worklog.md to understand project state (24 tools, dark mode, polished UI)
+- Performed QA testing using agent-browser across all tool pages
+- Homepage loads correctly, dark mode toggle works, search dialog functional
+- All 24 existing tools verified via HTTP 200 status codes
+- Lint passes with zero errors
+- Added 3 new AI-powered PDF tools using z-ai-web-dev-sdk:
+  - PDF to Markdown: VLM-based page-to-markdown conversion with quality selector, page range, Preview/Source toggle, copy/download
+  - OCR PDF: VLM-based text extraction from scanned documents with language selector (7 languages), quality selector, word/char count
+  - Summarize PDF: VLM per-page summarization + LLM combined summary with 3 modes (Brief/Detailed/Key Points), accordion per-page details
+- Created 3 backend API routes for AI tools:
+  - /api/pdf-to-markdown/route.ts: VLM converts page images to Markdown
+  - /api/ocr-pdf/route.ts: VLM extracts text from page images with language hints
+  - /api/summarize-pdf/route.ts: VLM per-page + LLM combined summarization
+- Updated homepage styling and badges:
+  - Stats updated to 27+ PDF Tools
+  - Added "AI" badge (violet-to-purple gradient with Sparkles icon) for AI tools on tool cards
+  - Added "AI" category badge on Convert and Optimize category headers
+  - Updated "New" badge list to include all new tools
+  - Updated FAQ with AI-specific questions about data safety, offline usage, AI tools, tool count
+  - Updated WhyChooseCounter and HowItWorks to reflect 27+ tools
+- All 27 tools verified via browser testing (all pages render correctly)
+- Lint passes with zero errors
+- Dev server compiles and serves successfully
+
+Stage Summary:
+- Project expanded from 24 to 27 PDF tools
+- 3 new AI-powered tools added (PDF to Markdown, OCR PDF, Summarize PDF) with backend API
+- AI badges and visual indicators added throughout the UI
+- Homepage stats, FAQ, and tool counts updated
+- Total tool count: 27 (Merge, Split, Compress, Rotate, PDF-to-JPG, JPG-to-PDF, Watermark, Protect, Organize, PDF-to-Text, Page Numbers, Extract Pages, Edit Metadata, Delete Pages, PDF-to-PNG, Flatten, Crop PDF, Unlock, Repair, Redact, Compare, Rearrange, PDF-to-HTML, Sign, PDF-to-Markdown, OCR PDF, Summarize PDF)
+
+Current project status: Stable, feature-rich with 27 tools including 3 AI-powered tools, visually polished with dark mode
+Unresolved issues: None critical
+Priority recommendations for next phase:
+- Add PDF to Word/DOCX conversion using AI
+- Add PDF annotation/drawing tool
+- Add batch operations for processing multiple files
+- Add undo/redo support in Organize/Delete Pages tools
+- Improve mobile responsiveness for tool controls
+- Add full-page PDF preview component
+- Add PDF form filling tool
