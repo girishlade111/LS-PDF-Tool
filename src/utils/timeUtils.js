@@ -1,11 +1,11 @@
-export function getRelativeTime(isoString) {
+export function getRelativeTime(isoString, now = Date.now()) {
   const timestamp = new Date(isoString).getTime();
 
   if (!Number.isFinite(timestamp)) {
     return 'just now';
   }
 
-  const seconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
+  const seconds = Math.max(0, Math.floor((now - timestamp) / 1000));
 
   if (seconds < 60) return 'just now';
 

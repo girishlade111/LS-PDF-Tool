@@ -42,6 +42,7 @@ function getEntrySize(entry) {
 
 export function RecentHistory() {
   const [history, setHistory] = useState([]);
+  const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
     let mounted = true;
@@ -58,6 +59,16 @@ export function RecentHistory() {
       mounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (history.length === 0) return undefined;
+
+    const intervalId = window.setInterval(() => {
+      setNow(Date.now());
+    }, 60_000);
+
+    return () => window.clearInterval(intervalId);
+  }, [history.length]);
 
   const handleClearHistory = async () => {
     await clearHistory();
@@ -115,7 +126,7 @@ export function RecentHistory() {
                       <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                         <span>{formatFileSize(getEntrySize(entry))}</span>
                         <span aria-hidden="true">.</span>
-                        <span>{getRelativeTime(timestamp)}</span>
+                        <span>{getRelativeTime(timestamp, now)}</span>
                       </div>
                     </div>
                   </div>
