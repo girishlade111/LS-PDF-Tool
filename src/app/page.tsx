@@ -41,7 +41,7 @@ import { useFileStore } from '@/store/file-store';
 import { tools, categories, getToolById } from '@/lib/tools';
 import { Separator } from '@/components/ui/separator';
 import { ErrorBoundary } from '@/components/shared/error-boundary';
-import { RecentHistory } from '@/components/shared/recent-history';
+import { RecentHistory } from '@/components/common/RecentHistory';
 import { ThemeToggle } from '@/components/shared/theme-toggle';
 
 // Lazy load tool components
@@ -1533,8 +1533,8 @@ function HomePage() {
       <HeroSection />
       <FeaturedToolsSection />
       <HowItWorksSection />
-      <RecentHistory />
       <ToolsGrid />
+      <RecentHistory />
 
       {/* Feature section - "Why Choose PDF Tools?" with glass-morphism */}
       <section className="mx-auto max-w-6xl px-4 sm:px-6 pb-16">

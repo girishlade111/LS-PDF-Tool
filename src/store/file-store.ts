@@ -1,4 +1,7 @@
 import { create } from 'zustand';
+import { addHistoryEntry } from '@/lib/indexeddb';
+import { getToolById } from '@/lib/tools';
+import { useNavStore } from '@/store/nav-store';
 
 export interface PDFFile {
   id: string;
@@ -16,6 +19,35 @@ export interface ProcessResult {
   blob: Blob;
   filename: string;
   size: number;
+}
+
+function recordHistory(
+  files: PDFFile[],
+  status: 'success' | 'error',
+  result?: ProcessResult
+) {
+  if (typeof window === 'undefined') return;
+
+  const toolType = useNavStore.getState().currentPage;
+  if (toolType === 'home') return;
+
+  const tool = getToolById(toolType);
+  const firstFile = files[0];
+  const createdAt = Date.now();
+
+  void addHistoryEntry({
+    id: `${createdAt}-${Math.random().toString(36).slice(2, 9)}`,
+    toolType,
+    toolName: tool?.name || toolType,
+    inputFiles: files.map((file) => file.name),
+    outputFiles: result ? [result.filename] : [],
+    filename: result?.filename || firstFile?.name || 'Unknown file',
+    fileSize: result?.size || firstFile?.size || 0,
+    status,
+    createdAt,
+  }).catch((error) => {
+    console.error('Failed to record history:', error);
+  });
 }
 
 interface FileStore {
@@ -82,18 +114,26 @@ export const useFileStore = create<FileStore>((set) => ({
     processingMessage: message || state.processingMessage,
   })),
   
-  setSuccess: (result) => set({
-    processingState: 'success',
-    processingProgress: 100,
-    processingMessage: 'Done!',
-    result,
-    error: null,
+  setSuccess: (result) => set((state) => {
+    recordHistory(state.files, 'success', result);
+
+    return {
+      processingState: 'success',
+      processingProgress: 100,
+      processingMessage: 'Done!',
+      result,
+      error: null,
+    };
   }),
   
-  setError: (error) => set({
-    processingState: 'error',
-    processingMessage: 'Error',
-    error,
+  setError: (error) => set((state) => {
+    recordHistory(state.files, 'error');
+
+    return {
+      processingState: 'error',
+      processingMessage: 'Error',
+      error,
+    };
   }),
   
   resetProcessing: () => set({

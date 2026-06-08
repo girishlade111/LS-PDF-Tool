@@ -24,6 +24,10 @@ export interface OperationHistory {
   inputFiles: string[];
   outputFiles: string[];
   createdAt: number;
+  filename?: string;
+  fileSize?: number;
+  size?: number;
+  status?: 'success' | 'error';
 }
 
 let dbInstance: IDBPDatabase | null = null;
@@ -85,6 +89,10 @@ export async function addHistory(entry: OperationHistory): Promise<void> {
   await tx.done;
 }
 
+export async function addHistoryEntry(entry: OperationHistory): Promise<void> {
+  await addHistory(entry);
+}
+
 export async function getRecentHistory(limit = 5): Promise<OperationHistory[]> {
   const db = await getDB();
   const tx = db.transaction(STORES.HISTORY, 'readonly');
@@ -96,6 +104,10 @@ export async function getRecentHistory(limit = 5): Promise<OperationHistory[]> {
     cursor = await cursor.continue();
   }
   return entries;
+}
+
+export async function getHistory(): Promise<OperationHistory[]> {
+  return getRecentHistory(5);
 }
 
 export async function clearHistory(): Promise<void> {
