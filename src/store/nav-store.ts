@@ -27,7 +27,9 @@ export type ToolId =
   | 'sign'
   | 'pdf-to-markdown'
   | 'ocr-pdf'
-  | 'summarize-pdf';
+  | 'summarize-pdf'
+  | 'fill-form'
+  | 'pdf-to-docx';
 
 interface NavStore {
   currentPage: 'home' | ToolId;

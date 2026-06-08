@@ -3,7 +3,8 @@ import {
   FileImage, ImagePlus, Droplets, Lock, 
   LayoutList, FileText, Hash, Settings, Trash2,
   Layers, Crop, Unlock, Wrench, Eraser, GitCompare,
-  ArrowUpDown, Code, PenTool, Sparkles, Brain
+  ArrowUpDown, Code, PenTool, Sparkles, Brain, ClipboardList,
+  FileOutput
 } from 'lucide-react';
 import React from 'react';
 
@@ -260,6 +261,24 @@ export const tools: ToolDefinition[] = [
     color: 'text-amber-600 dark:text-amber-400',
     bgColor: 'bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/30 dark:hover:bg-amber-950/50',
     category: 'optimize',
+  },
+  {
+    id: 'fill-form',
+    name: 'Fill Form',
+    description: 'Fill in interactive form fields in PDF documents',
+    icon: ClipboardList,
+    color: 'text-sky-600 dark:text-sky-400',
+    bgColor: 'bg-sky-50 hover:bg-sky-100 dark:bg-sky-950/30 dark:hover:bg-sky-950/50',
+    category: 'organize',
+  },
+  {
+    id: 'pdf-to-docx',
+    name: 'PDF to DOCX',
+    description: 'AI-powered conversion of PDF to Word document',
+    icon: FileOutput,
+    color: 'text-blue-600 dark:text-blue-400',
+    bgColor: 'bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/30 dark:hover:bg-blue-950/50',
+    category: 'convert',
   },
 ];
 

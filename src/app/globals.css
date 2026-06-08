@@ -424,3 +424,110 @@
 .animate-icon-glow {
   animation: icon-glow 2s ease-in-out infinite;
 }
+
+/* Scale bounce for interactive elements */
+@keyframes scale-bounce {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.animate-scale-bounce {
+  animation: scale-bounce 0.4s ease-in-out;
+}
+
+/* Typing cursor animation */
+@keyframes blink-cursor {
+  0%, 50% { border-right-color: transparent; }
+  51%, 100% { border-right-color: currentColor; }
+}
+
+.animate-cursor {
+  border-right: 2px solid;
+  animation: blink-cursor 1s step-end infinite;
+}
+
+/* Confetti-like burst animation for success states */
+@keyframes burst {
+  0% { transform: scale(0.8); opacity: 0; }
+  50% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.animate-burst {
+  animation: burst 0.5s ease-out forwards;
+}
+
+/* Smooth rotation for loading indicators */
+@keyframes spin-smooth {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin-smooth {
+  animation: spin-smooth 2s linear infinite;
+}
+
+/* Dark mode scrollbar improvements */
+.dark .scrollbar-thin::-webkit-scrollbar-thumb {
+  background: oklch(0.4 0 0);
+}
+
+.dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.5 0 0);
+}
+
+.dark .overflow-y-auto::-webkit-scrollbar-thumb {
+  background: oklch(0.35 0 0);
+}
+
+.dark .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.45 0 0);
+}
+
+/* Subtle gradient border animation for active cards */
+@keyframes gradient-border-rotate {
+  0% { --gradient-angle: 0deg; }
+  100% { --gradient-angle: 360deg; }
+}
+
+@property --gradient-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.animate-gradient-border {
+  animation: gradient-border-rotate 3s linear infinite;
+  background: conic-gradient(from var(--gradient-angle), oklch(0.6 0.2 25 / 0.5), oklch(0.7 0.15 50 / 0.3), oklch(0.6 0.2 25 / 0.5));
+}
+
+/* Smooth page-level transitions */
+@keyframes page-enter-up {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-page-enter {
+  animation: page-enter-up 0.4s ease-out forwards;
+}
+
+/* Hover lift effect for cards */
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px oklch(0 0 0 / 0.1);
+}
+
+.dark .hover-lift:hover {
+  box-shadow: 0 8px 25px oklch(0 0 0 / 0.3);
+}

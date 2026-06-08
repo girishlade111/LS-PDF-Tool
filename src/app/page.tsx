@@ -121,6 +121,12 @@ const OCRPDFTool = lazy(() =>
 const SummarizePDFTool = lazy(() =>
   import('@/tools/summarize-pdf').then((m) => ({ default: m.SummarizePDFTool }))
 );
+const FillFormTool = lazy(() =>
+  import('@/tools/fill-form').then((m) => ({ default: m.FillFormTool }))
+);
+const PDFToDOCXTool = lazy(() =>
+  import('@/tools/pdf-to-docx').then((m) => ({ default: m.PDFToDOCXTool }))
+);
 
 const toolComponents: Record<string, React.LazyExoticComponent<React.ComponentType>> = {
   merge: MergePDFTool,
@@ -150,6 +156,8 @@ const toolComponents: Record<string, React.LazyExoticComponent<React.ComponentTy
   'pdf-to-markdown': PDFToMarkdownTool,
   'ocr-pdf': OCRPDFTool,
   'summarize-pdf': SummarizePDFTool,
+  'fill-form': FillFormTool,
+  'pdf-to-docx': PDFToDOCXTool,
 };
 
 function ToolLoader() {
@@ -505,7 +513,7 @@ function HowItWorksSection() {
     {
       number: 2,
       title: 'Choose Your Tool',
-      description: 'Select from 27+ tools: merge, split, compress, rotate, watermark, and more.',
+      description: 'Select from 29+ tools: merge, split, compress, rotate, watermark, and more.',
       icon: Wrench,
     },
     {
@@ -627,7 +635,7 @@ function StatsSection() {
   }, []);
 
   const statDefs = [
-    { target: 27, suffix: '+', label: 'PDF Tools', icon: Wrench },
+    { target: 29, suffix: '+', label: 'PDF Tools', icon: Wrench },
     { target: 100, suffix: '%', label: 'Free Forever', icon: Gift },
     { target: 0, suffix: '', label: 'Data Uploads', icon: Shield },
     { target: 50, suffix: 'K+', label: 'Happy Users', icon: Users },
@@ -1228,8 +1236,8 @@ function ToolsGrid() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 transition-all duration-500">
               {categoryTools.map((tool) => {
                 const Icon = tool.icon;
-                const isNewTool = ['flatten', 'crop-pdf', 'unlock', 'repair', 'redact', 'compare', 'rearrange', 'pdf-to-html', 'sign', 'pdf-to-markdown', 'ocr-pdf', 'summarize-pdf'].includes(tool.id);
-                const isAITool = ['pdf-to-markdown', 'ocr-pdf', 'summarize-pdf'].includes(tool.id);
+                const isNewTool = ['flatten', 'crop-pdf', 'unlock', 'repair', 'redact', 'compare', 'rearrange', 'pdf-to-html', 'sign', 'pdf-to-markdown', 'ocr-pdf', 'summarize-pdf', 'fill-form', 'pdf-to-docx'].includes(tool.id);
+                const isAITool = ['pdf-to-markdown', 'ocr-pdf', 'summarize-pdf', 'pdf-to-docx'].includes(tool.id);
                 const categoryLabel = categories.find((c) => c.id === tool.category)?.name || tool.category;
                 return (
                   <a
@@ -1422,7 +1430,7 @@ function HomePage() {
               <p className="text-sm text-muted-foreground">
                 Use on any device with a modern browser. Desktop, tablet, or mobile.
               </p>
-              <WhyChooseCounter target={27} suffix="+ Tools" />
+              <WhyChooseCounter target={29} suffix="+ Tools" />
             </div>
           </div>
         </div>
@@ -1445,11 +1453,15 @@ function FAQSection() {
     },
     {
       question: 'What are AI-powered tools?',
-      answer: 'AI-powered tools like OCR PDF and PDF to Markdown use advanced AI models to analyze your document pages. These tools can extract text from scanned documents and convert PDFs to structured Markdown format with high accuracy.',
+      answer: 'AI-powered tools like OCR PDF, PDF to Markdown, and PDF to DOCX use advanced AI models to analyze your document pages. These tools can extract text from scanned documents, convert PDFs to structured Markdown format, and create editable Word documents with high accuracy.',
+    },
+    {
+      question: 'Can I fill in PDF forms?',
+      answer: 'Yes! Our Fill Form tool reads interactive form fields from PDFs (text fields, checkboxes, dropdowns, and radio buttons) and lets you fill them in directly in your browser. Save the completed form as a new PDF.',
     },
     {
       question: 'How many PDF tools are available?',
-      answer: 'We offer 27+ free PDF tools including merge, split, compress, rotate, watermark, protect, OCR, summarize, and many more. All tools work directly in your browser with no registration required.',
+      answer: 'We offer 29+ free PDF tools including merge, split, compress, rotate, watermark, protect, OCR, summarize, fill forms, convert to DOCX, and many more. All tools work directly in your browser with no registration required.',
     },
     {
       question: 'Can I use these tools offline?',

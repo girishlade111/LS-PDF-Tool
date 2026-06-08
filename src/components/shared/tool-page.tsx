@@ -1,8 +1,9 @@
 'use client';
 
 import React from 'react';
-import { ChevronRight, Home, ArrowLeft, Upload, Settings2, Play, CheckCircle2 } from 'lucide-react';
+import { ChevronRight, Home, ArrowLeft, Upload, Settings2, Play, CheckCircle2, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { useNavStore } from '@/store/nav-store';
 import { getToolById } from '@/lib/tools';
 import { FileDropzone } from '@/components/shared/file-dropzone';
@@ -94,6 +95,7 @@ export function ToolPage({
   if (!tool) return null;
 
   const Icon = tool.icon;
+  const isAITool = ['pdf-to-markdown', 'ocr-pdf', 'summarize-pdf', 'pdf-to-docx'].includes(toolId);
 
   // Determine current step
   let currentStep: 1 | 2 | 3 = 1;
@@ -104,7 +106,7 @@ export function ToolPage({
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+    <div className="space-y-6 animate-page-enter">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-sm text-muted-foreground" aria-label="Breadcrumb">
         <Button
@@ -130,14 +132,25 @@ export function ToolPage({
       </button>
 
       {/* Header with decorative background */}
-      <div className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-card via-card to-muted/20 p-6">
-        <div className="absolute top-0 right-0 h-32 w-32 -translate-y-8 translate-x-8 rounded-full bg-gradient-to-br from-primary/5 to-transparent blur-2xl" />
+      <div className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 group">
+        {/* Animated decorative gradient orbs */}
+        <div className="absolute top-0 right-0 h-32 w-32 -translate-y-8 translate-x-8 rounded-full bg-gradient-to-br from-primary/5 to-transparent blur-2xl transition-all duration-700 group-hover:from-primary/10 group-hover:blur-3xl" />
+        <div className="absolute bottom-0 left-0 h-20 w-20 translate-y-4 -translate-x-4 rounded-full bg-gradient-to-tr from-primary/3 to-transparent blur-xl" />
+
         <div className="relative flex items-start gap-4">
-          <div className={`p-3.5 rounded-2xl ${tool.bgColor} shadow-sm`}>
+          <div className={`p-3.5 rounded-2xl ${tool.bgColor} shadow-sm transition-transform duration-300 group-hover:scale-105`}>
             <Icon className={`h-7 w-7 ${tool.color}`} />
           </div>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">{tool.name}</h1>
+          <div className="flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-2xl font-bold tracking-tight">{tool.name}</h1>
+              {isAITool && (
+                <Badge className="bg-gradient-to-r from-violet-500 to-purple-500 text-white text-[10px] px-1.5 py-0 h-5 border-0 gap-0.5">
+                  <Sparkles className="h-2.5 w-2.5" />
+                  AI Powered
+                </Badge>
+              )}
+            </div>
             <p className="text-muted-foreground mt-1.5">{tool.description}</p>
           </div>
         </div>
