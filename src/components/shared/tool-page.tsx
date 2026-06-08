@@ -133,20 +133,23 @@ export function ToolPage({
           size="sm"
           className="h-auto p-0 hover:bg-transparent text-muted-foreground hover:text-foreground transition-colors"
           onClick={goHome}
+          aria-label="Back to all tools"
         >
-          <Home className="h-3.5 w-3.5 mr-1" />
+          <Home className="h-3.5 w-3.5 mr-1" aria-hidden="true" />
           All Tools
         </Button>
         <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50" aria-hidden="true" />
-        <span className="text-foreground font-medium">{tool.name}</span>
+        <span className="text-foreground font-medium" aria-current="page">{tool.name}</span>
       </nav>
 
       {/* Back to All Tools link - more prominent */}
       <button
+        type="button"
         onClick={goHome}
-        className="flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors group"
+        aria-label="Back to all tools"
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors group rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       >
-        <ArrowLeft className="h-3.5 w-3.5 group-hover:-translate-x-0.5 transition-transform" />
+        <ArrowLeft className="h-3.5 w-3.5 group-hover:-translate-x-0.5 transition-transform" aria-hidden="true" />
         Back to All Tools
       </button>
 
