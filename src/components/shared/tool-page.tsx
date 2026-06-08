@@ -100,6 +100,17 @@ export function ToolPage({
   const tool = getToolById(toolId);
   const { files, processingState } = useFileStore();
 
+  // Per-route <title> for browser tab + history/SEO.
+  // Restores the default title when the user navigates away.
+  useEffect(() => {
+    if (typeof document === 'undefined' || !tool) return undefined;
+    const previousTitle = document.title;
+    document.title = `${tool.name} — ${SITE_NAME}`;
+    return () => {
+      document.title = previousTitle || DEFAULT_TITLE;
+    };
+  }, [tool]);
+
   if (!tool) return null;
 
   const Icon = tool.icon;
