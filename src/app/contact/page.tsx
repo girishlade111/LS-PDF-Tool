@@ -311,3 +311,106 @@ export default function ContactPage() {
             title="Twitter / X"
             description="Follow us for product updates, tips, and announcements."
             linkText="Follow Us"
+            linkHref="https://twitter.com"
+          />
+        </div>
+      </LegalSection>
+
+      {/* FAQ */}
+      <LegalSection title="Frequently Asked Questions" id="faq">
+        <LegalSubsection title="How long does it take to get a response?">
+          <p>
+            We typically respond within <strong>2-3 business days</strong>. For bug reports, we may take
+            longer if we need to investigate or reproduce the issue. We appreciate your patience!
+          </p>
+        </LegalSubsection>
+
+        <LegalSubsection title="Do you offer custom PDF solutions?">
+          <p>
+            While we can&rsquo;t provide custom development for individual users, we&rsquo;re always
+            interested in hearing about features that would benefit the broader community. Submit a feature
+            request and we&rsquo;ll evaluate it for our roadmap.
+          </p>
+        </LegalSubsection>
+
+        <LegalSubsection title="Is my data safe when I contact you?">
+          <p>
+            Yes. We only use the information you provide in the contact form to respond to your inquiry.
+            We don&rsquo;t share it with third parties, and we don&rsquo;t add you to marketing lists
+            unless you explicitly opt in. See our{' '}
+            <a href="/privacy" className="text-primary underline">Privacy Policy</a> for details.
+          </p>
+        </LegalSubsection>
+
+        <LegalSubsection title="Can I report abuse or illegal content?">
+          <p>
+            If you encounter content that violates our terms or is illegal, please email us at{' '}
+            <strong>support@lspdf.tools</strong> with &ldquo;ABUSE&rdquo; in the subject line. We take all
+            reports seriously and will investigate promptly.
+          </p>
+        </LegalSubsection>
+      </LegalSection>
+    </LegalLayout>
+  );
+}
+
+function ContactCard({
+  icon,
+  title,
+  value,
+  description,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  value: string;
+  description: string;
+}) {
+  return (
+    <div className="flex items-start gap-3 p-4 rounded-lg border bg-card hover:border-primary/30 transition-colors">
+      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-red-500/10 to-orange-500/10 text-red-600 dark:text-orange-400 shrink-0">
+        {icon}
+      </div>
+      <div>
+        <h4 className="font-semibold text-sm mb-0.5 text-foreground">{title}</h4>
+        <p className="text-sm font-medium text-foreground mb-0.5">{value}</p>
+        <p className="text-xs text-muted-foreground">{description}</p>
+      </div>
+    </div>
+  );
+}
+
+function SocialCard({
+  icon,
+  title,
+  description,
+  linkText,
+  linkHref,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  linkText: string;
+  linkHref: string;
+}) {
+  return (
+    <a
+      href={linkHref}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-start gap-3 p-4 rounded-lg border bg-card hover:border-primary/50 hover:shadow-sm transition-all group"
+    >
+      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary shrink-0">
+        {icon}
+      </div>
+      <div className="flex-1 min-w-0">
+        <h4 className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors">
+          {title}
+        </h4>
+        <p className="text-xs text-muted-foreground leading-relaxed mb-1.5">
+          {description}
+        </p>
+        <span className="text-xs text-primary font-medium">{linkText} →</span>
+      </div>
+    </a>
+  );
+}
