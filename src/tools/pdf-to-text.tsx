@@ -5,12 +5,16 @@ import { ToolPage } from '@/components/shared/tool-page';
 import { useFileStore } from '@/store/file-store';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { FileText, Copy, Download } from 'lucide-react';
+import { FileText, Copy, Download, Check, Type } from 'lucide-react';
 
 export function PDFToTextTool() {
   const { files, setProcessing, setProgress, setSuccess, setError } = useFileStore();
   const [extractedText, setExtractedText] = useState('');
   const [isExtracted, setIsExtracted] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const wordCount = extractedText.trim() ? extractedText.trim().split(/\s+/).length : 0;
+  const charCount = extractedText.length;
 
   const handleExtract = async () => {
     if (files.length === 0) return;
@@ -48,8 +52,22 @@ export function PDFToTextTool() {
     }
   };
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(extractedText);
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(extractedText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback for older browsers
+      const textarea = document.createElement('textarea');
+      textarea.value = extractedText;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   const handleDownloadTxt = () => {
@@ -57,7 +75,7 @@ export function PDFToTextTool() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'extracted-text.txt';
+    a.download = files.length > 0 ? `${files[0].name.replace('.pdf', '')}.txt` : 'extracted-text.txt';
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -74,29 +92,52 @@ export function PDFToTextTool() {
         </Button>
       }
     >
-      {isExtracted && extractedText && (
+      {isExtracted && extractedText ? (
         <div className="space-y-3">
+          {/* Stats bar */}
+          <div className="flex items-center gap-4 rounded-lg border bg-muted/30 px-4 py-2">
+            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              <Type className="h-3.5 w-3.5" />
+              <span>{wordCount.toLocaleString()} words</span>
+            </div>
+            <div className="h-3 w-px bg-border" />
+            <div className="text-sm text-muted-foreground">
+              {charCount.toLocaleString()} characters
+            </div>
+          </div>
+
+          {/* Action buttons */}
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={handleCopy}>
-              <Copy className="h-3.5 w-3.5 mr-1.5" />
-              Copy Text
+              {copied ? (
+                <>
+                  <Check className="h-3.5 w-3.5 mr-1.5 text-green-600" />
+                  Copied!
+                </>
+              ) : (
+                <>
+                  <Copy className="h-3.5 w-3.5 mr-1.5" />
+                  Copy to Clipboard
+                </>
+              )}
             </Button>
             <Button variant="outline" size="sm" onClick={handleDownloadTxt}>
               <Download className="h-3.5 w-3.5 mr-1.5" />
-              Download .txt
+              Download as TXT
             </Button>
           </div>
+
+          {/* Scrollable text area */}
           <Textarea
             value={extractedText}
             readOnly
-            className="min-h-[300px] font-mono text-sm"
+            className="min-h-[300px] max-h-[500px] font-mono text-sm resize-y"
           />
         </div>
-      )}
-      {!isExtracted && (
+      ) : (
         <div className="rounded-xl border bg-card p-4">
           <p className="text-sm text-muted-foreground">
-            Upload a PDF to extract its text content. The text from each page will be displayed and available for download.
+            Upload a PDF to extract its text content. The text from each page will be displayed and available for copying or downloading.
           </p>
         </div>
       )}

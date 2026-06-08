@@ -2,10 +2,11 @@
 
 import React, { useCallback, useState, useRef } from 'react';
 import { FileUp, FileText, Image as ImageIcon } from 'lucide-react';
-import { generateId } from '@/lib/pdf-utils';
+import { generateId, formatFileSize } from '@/lib/pdf-utils';
 import { PDFFile } from '@/store/file-store';
 import { useFileStore } from '@/store/file-store';
 import { getPDFPageCount } from '@/lib/pdf-utils';
+import { toast } from 'sonner';
 
 interface FileDropzoneProps {
   accept?: string;
@@ -34,10 +35,14 @@ export function FileDropzone({
   const processFiles = useCallback(async (fileList: FileList | File[]) => {
     const files = Array.from(fileList);
     const pdfFiles: PDFFile[] = [];
+    let skippedCount = 0;
 
     for (const file of files) {
       if (file.size > maxSize) {
-        console.warn(`File ${file.name} exceeds maximum size`);
+        skippedCount++;
+        toast.error(`File too large`, {
+          description: `${file.name} (${formatFileSize(file.size)}) exceeds the ${formatFileSize(maxSize)} limit.`,
+        });
         continue;
       }
 
@@ -65,6 +70,18 @@ export function FileDropzone({
     if (pdfFiles.length > 0) {
       addFiles(pdfFiles);
       onFilesAdded?.(pdfFiles);
+      const count = pdfFiles.length;
+      toast.success(`${count} file${count !== 1 ? 's' : ''} added`, {
+        description: pdfFiles.length === 1
+          ? `${pdfFiles[0].name} (${formatFileSize(pdfFiles[0].size)})`
+          : `${count} files ready for processing`,
+      });
+    }
+
+    if (skippedCount > 0 && pdfFiles.length === 0) {
+      toast.error('No files added', {
+        description: 'All selected files exceeded the size limit.',
+      });
     }
   }, [addFiles, maxSize, onFilesAdded]);
 

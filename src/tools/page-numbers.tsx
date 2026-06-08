@@ -8,6 +8,7 @@ import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 import { Hash, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
 
 export function PageNumbersTool() {
@@ -121,6 +122,17 @@ export function PageNumbersTool() {
               <SelectItem value="dash">- 1 -, - 2 -...</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="startFrom" className="text-sm font-medium">Start from page number</Label>
+          <Input
+            id="startFrom"
+            type="number"
+            min={1}
+            value={startFrom}
+            onChange={(e) => setStartFrom(Math.max(1, parseInt(e.target.value) || 1))}
+            className="w-full"
+          />
         </div>
       </div>
     </ToolPage>

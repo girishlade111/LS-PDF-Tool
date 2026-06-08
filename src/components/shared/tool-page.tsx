@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { ChevronRight, Home } from 'lucide-react';
+import { ChevronRight, Home, ArrowLeft, Upload, Settings2, Play, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavStore } from '@/store/nav-store';
 import { getToolById } from '@/lib/tools';
@@ -21,6 +21,64 @@ interface ToolPageProps {
   actionButton: React.ReactNode;
 }
 
+function StepIndicator({ currentStep }: { currentStep: 1 | 2 | 3 }) {
+  const steps = [
+    { number: 1, label: 'Upload', icon: Upload },
+    { number: 2, label: 'Configure', icon: Settings2 },
+    { number: 3, label: 'Process', icon: Play },
+  ];
+
+  return (
+    <div className="flex items-center justify-center gap-1 sm:gap-2">
+      {steps.map((step, index) => {
+        const StepIcon = step.icon;
+        const isActive = currentStep === step.number;
+        const isCompleted = currentStep > step.number;
+
+        return (
+          <React.Fragment key={step.number}>
+            <div className="flex items-center gap-1.5">
+              <div
+                className={`
+                  flex h-7 w-7 items-center justify-center rounded-full transition-all duration-300 shrink-0
+                  ${isCompleted
+                    ? 'bg-green-500 text-white dark:bg-green-600'
+                    : isActive
+                      ? 'bg-gradient-to-br from-red-500 to-orange-500 text-white shadow-sm shadow-primary/20'
+                      : 'bg-muted text-muted-foreground'
+                  }
+                `}
+              >
+                {isCompleted ? (
+                  <CheckCircle2 className="h-4 w-4" />
+                ) : (
+                  <StepIcon className="h-3.5 w-3.5" />
+                )}
+              </div>
+              <span
+                className={`
+                  text-xs font-medium transition-colors duration-300 hidden sm:inline
+                  ${isActive ? 'text-foreground' : isCompleted ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}
+                `}
+              >
+                {step.label}
+              </span>
+            </div>
+            {index < steps.length - 1 && (
+              <div
+                className={`
+                  h-px w-6 sm:w-10 transition-colors duration-300
+                  ${currentStep > step.number ? 'bg-green-500 dark:bg-green-600' : 'bg-border'}
+                `}
+              />
+            )}
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
+}
+
 export function ToolPage({
   toolId,
   accept = '.pdf',
@@ -36,6 +94,14 @@ export function ToolPage({
   if (!tool) return null;
 
   const Icon = tool.icon;
+
+  // Determine current step
+  let currentStep: 1 | 2 | 3 = 1;
+  if (processingState === 'success' || processingState === 'error' || processingState === 'processing') {
+    currentStep = 3;
+  } else if (files.length > 0) {
+    currentStep = 2;
+  }
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -54,6 +120,15 @@ export function ToolPage({
         <span className="text-foreground font-medium">{tool.name}</span>
       </nav>
 
+      {/* Back to All Tools link - more prominent */}
+      <button
+        onClick={goHome}
+        className="flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors group"
+      >
+        <ArrowLeft className="h-3.5 w-3.5 group-hover:-translate-x-0.5 transition-transform" />
+        Back to All Tools
+      </button>
+
       {/* Header with decorative background */}
       <div className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-card via-card to-muted/20 p-6">
         <div className="absolute top-0 right-0 h-32 w-32 -translate-y-8 translate-x-8 rounded-full bg-gradient-to-br from-primary/5 to-transparent blur-2xl" />
@@ -67,6 +142,9 @@ export function ToolPage({
           </div>
         </div>
       </div>
+
+      {/* Step Indicator */}
+      <StepIndicator currentStep={currentStep} />
 
       {/* Tool-specific options */}
       {children}

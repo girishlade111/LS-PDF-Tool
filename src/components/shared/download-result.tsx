@@ -1,11 +1,12 @@
 'use client';
 
 import React from 'react';
-import { Download, FileDown, RotateCcw, CheckCircle2, TrendingDown } from 'lucide-react';
+import { Download, FileDown, RotateCcw, CheckCircle2, TrendingDown, FileCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFileStore } from '@/store/file-store';
 import { formatFileSize } from '@/lib/pdf-utils';
 import { saveAs } from 'file-saver';
+import { toast } from 'sonner';
 
 export function DownloadResult() {
   const { result, processingState, files, resetAll } = useFileStore();
@@ -14,6 +15,10 @@ export function DownloadResult() {
 
   const handleDownload = () => {
     saveAs(result.blob, result.filename);
+    toast.success('Download started', {
+      description: `${result.filename} (${formatFileSize(result.size)})`,
+      icon: <FileCheck className="h-4 w-4" />,
+    });
   };
 
   const originalSize = files.length > 0 ? files.reduce((sum, f) => sum + f.size, 0) : 0;

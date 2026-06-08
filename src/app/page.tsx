@@ -11,6 +11,12 @@ import {
   Clock,
   Menu,
   X,
+  ArrowUp,
+  Users,
+  CheckCircle2,
+  Upload,
+  Settings2,
+  Play,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -60,6 +66,15 @@ const PageNumbersTool = lazy(() =>
 const ExtractPagesTool = lazy(() =>
   import('@/tools/extract-pages').then((m) => ({ default: m.ExtractPagesTool }))
 );
+const EditMetadataTool = lazy(() =>
+  import('@/tools/edit-metadata').then((m) => ({ default: m.EditMetadataTool }))
+);
+const DeletePagesTool = lazy(() =>
+  import('@/tools/delete-pages').then((m) => ({ default: m.DeletePagesTool }))
+);
+const PDFToPNGTool = lazy(() =>
+  import('@/tools/pdf-to-png').then((m) => ({ default: m.PDFToPNGTool }))
+);
 
 const toolComponents: Record<string, React.LazyExoticComponent<React.ComponentType>> = {
   merge: MergePDFTool,
@@ -74,6 +89,9 @@ const toolComponents: Record<string, React.LazyExoticComponent<React.ComponentTy
   'pdf-to-text': PDFToTextTool,
   'page-numbers': PageNumbersTool,
   'extract-pages': ExtractPagesTool,
+  'edit-metadata': EditMetadataTool,
+  'delete-pages': DeletePagesTool,
+  'pdf-to-png': PDFToPNGTool,
 };
 
 function ToolLoader() {
@@ -173,6 +191,16 @@ function Header() {
 // ─── Footer ────────────────────────────────────────────────────────────────────
 
 function Footer() {
+  const [showBackToTop, setShowBackToTop] = React.useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowBackToTop(window.scrollY > 400);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   return (
     <footer className="mt-auto border-t bg-muted/30">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 py-8">
@@ -187,6 +215,11 @@ function Footer() {
             <p className="text-sm text-muted-foreground">
               Free, secure, and fast PDF tools. All processing happens in your browser — your files never leave your device.
             </p>
+            {/* Social proof */}
+            <div className="flex items-center gap-2 pt-1">
+              <Users className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium">Join 50,000+ users who trust PDF Tools</span>
+            </div>
           </div>
 
           <div className="space-y-3">
@@ -248,6 +281,17 @@ function Footer() {
           </div>
         </div>
       </div>
+
+      {/* Back to top button */}
+      {showBackToTop && (
+        <button
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          className="fixed bottom-6 right-6 z-50 flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-red-500 to-orange-500 text-white shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-200"
+          aria-label="Back to top"
+        >
+          <ArrowUp className="h-4 w-4" />
+        </button>
+      )}
     </footer>
   );
 }
@@ -256,8 +300,8 @@ function FooterLink({ id, children }: { id: string; children: React.ReactNode })
   const { navigate } = useNavStore();
   return (
     <button
-      onClick={() => navigate(id as any)}
-      className="hover:text-foreground transition-colors"
+      onClick={() => navigate(id as Parameters<typeof navigate>[0])}
+      className="hover:text-foreground hover:underline underline-offset-4 transition-all duration-200"
     >
       {children}
     </button>
@@ -271,11 +315,35 @@ function HeroSection() {
 
   return (
     <section className="relative overflow-hidden">
-      {/* Background decoration */}
+      {/* Background decoration with particle/dot pattern */}
       <div className="absolute inset-0 -z-10">
         <div className="absolute top-0 left-1/4 h-72 w-72 rounded-full bg-red-500/5 blur-3xl" />
         <div className="absolute top-20 right-1/4 h-72 w-72 rounded-full bg-orange-500/5 blur-3xl" />
         <div className="absolute -bottom-10 left-1/2 h-40 w-40 rounded-full bg-amber-500/5 blur-3xl" />
+        {/* Dot pattern overlay */}
+        <div
+          className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05]"
+          style={{
+            backgroundImage: 'radial-gradient(circle, currentColor 1px, transparent 1px)',
+            backgroundSize: '24px 24px',
+          }}
+        />
+      </div>
+
+      {/* Floating decorative PDF page shapes */}
+      <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
+        <div className="absolute top-12 left-[8%] animate-float">
+          <div className="h-16 w-12 rounded-sm border border-red-200/30 dark:border-red-800/20 bg-gradient-to-br from-red-50/40 to-orange-50/20 dark:from-red-950/20 dark:to-orange-950/10 shadow-sm rotate-[-15deg]" />
+        </div>
+        <div className="absolute top-24 right-[12%] animate-float-delay-1">
+          <div className="h-20 w-14 rounded-sm border border-orange-200/30 dark:border-orange-800/20 bg-gradient-to-br from-orange-50/40 to-amber-50/20 dark:from-orange-950/20 dark:to-amber-950/10 shadow-sm rotate-[12deg]" />
+        </div>
+        <div className="absolute bottom-20 left-[15%] animate-float-delay-2">
+          <div className="h-14 w-10 rounded-sm border border-amber-200/30 dark:border-amber-800/20 bg-gradient-to-br from-amber-50/40 to-yellow-50/20 dark:from-amber-950/20 dark:to-yellow-950/10 shadow-sm rotate-[-8deg]" />
+        </div>
+        <div className="absolute bottom-32 right-[8%] animate-float-delay-3">
+          <div className="h-18 w-12 rounded-sm border border-red-200/30 dark:border-red-800/20 bg-gradient-to-br from-red-50/40 to-orange-50/20 dark:from-red-950/20 dark:to-orange-950/10 shadow-sm rotate-[18deg]" />
+        </div>
       </div>
 
       <div className="mx-auto max-w-4xl text-center py-16 sm:py-20 px-4">
@@ -286,20 +354,20 @@ function HeroSection() {
 
         <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-foreground">
           Every PDF Tool You{' '}
-          <span className="bg-gradient-to-r from-red-500 via-orange-500 to-amber-500 bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-red-500 via-orange-500 to-amber-500 bg-clip-text text-transparent animate-gradient bg-[length:200%_200%]">
             Need
           </span>
         </h1>
 
         <p className="mt-6 text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-          Merge, split, compress, rotate, watermark, and convert your PDFs — all for free, all in your browser. 
+          Merge, split, compress, rotate, watermark, and convert your PDFs — all for free, all in your browser.
           No registration, no uploads, no limits.
         </p>
 
         <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
           <Button
             size="lg"
-            className="w-full sm:w-auto bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white shadow-lg shadow-red-500/20"
+            className="w-full sm:w-auto bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white shadow-lg shadow-red-500/25 animate-glow"
             onClick={() => navigate('merge')}
           >
             Get Started
@@ -308,7 +376,7 @@ function HeroSection() {
           <Button
             variant="outline"
             size="lg"
-            className="w-full sm:w-auto"
+            className="w-full sm:w-auto border-primary/20 hover:border-primary/40 hover:bg-primary/5"
             onClick={() => {
               document.getElementById('tools-grid')?.scrollIntoView({ behavior: 'smooth' });
             }}
@@ -317,22 +385,30 @@ function HeroSection() {
           </Button>
         </div>
 
-        {/* Trust badges */}
+        {/* Trust badges with hover pulse */}
         <div className="mt-10 flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <Shield className="h-4 w-4 text-green-600" />
+          <div className="flex items-center gap-2 hover:scale-105 transition-transform duration-200 cursor-default">
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
+              <Shield className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
+            </div>
             <span>100% Secure</span>
           </div>
-          <div className="flex items-center gap-2">
-            <Zap className="h-4 w-4 text-amber-600" />
+          <div className="flex items-center gap-2 hover:scale-105 transition-transform duration-200 cursor-default">
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
+              <Zap className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+            </div>
             <span>Lightning Fast</span>
           </div>
-          <div className="flex items-center gap-2">
-            <Globe className="h-4 w-4 text-blue-600" />
+          <div className="flex items-center gap-2 hover:scale-105 transition-transform duration-200 cursor-default">
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
+              <Globe className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+            </div>
             <span>Works Offline</span>
           </div>
-          <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4 text-purple-600" />
+          <div className="flex items-center gap-2 hover:scale-105 transition-transform duration-200 cursor-default">
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-purple-100 dark:bg-purple-900/30">
+              <Clock className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+            </div>
             <span>No Registration</span>
           </div>
         </div>
@@ -354,11 +430,14 @@ function ToolsGrid() {
 
         return (
           <div key={category.id} className="mb-10">
+            {/* Category section divider with gradient */}
             <div className="flex items-center gap-3 mb-5">
-              <h2 className="text-xl font-semibold">{category.name}</h2>
-              <Badge variant="outline" className="text-xs">
+              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
+              <h2 className="text-xl font-semibold shrink-0">{category.name}</h2>
+              <Badge variant="outline" className="text-xs shrink-0">
                 {category.description}
               </Badge>
+              <div className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {categoryTools.map((tool) => {
@@ -369,26 +448,40 @@ function ToolsGrid() {
                     href={`#${tool.id}`}
                     className="block no-underline"
                   >
-                    <Card className="group cursor-pointer transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 border-muted">
-                      <CardContent className="p-5">
+                    <Card className="group cursor-pointer transition-all duration-300 hover:shadow-lg hover:-translate-y-1 hover:shadow-primary/5 border-muted relative overflow-hidden">
+                      {/* Gradient overlay on hover */}
+                      <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      <CardContent className="p-5 relative">
                         <div className="flex items-start gap-4">
                           <div
-                            className={`p-2.5 rounded-xl ${tool.bgColor} transition-colors shrink-0`}
+                            className={`p-2.5 rounded-xl ${tool.bgColor} transition-all duration-300 group-hover:scale-110 group-hover:shadow-md shrink-0`}
                           >
                             <Icon className={`h-5 w-5 ${tool.color}`} />
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-2">
-                              <h3 className="font-semibold text-sm">{tool.name}</h3>
-                              <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                              <div className="flex items-center gap-2">
+                                <h3 className="font-semibold text-sm relative">
+                                  {tool.name}
+                                  {/* Animated underline on hover */}
+                                  <span className="absolute -bottom-0.5 left-0 h-0.5 w-0 bg-gradient-to-r from-red-500 to-orange-500 group-hover:w-full transition-all duration-300" />
+                                </h3>
+                                {/* Popular badge for Merge PDF */}
+                                {tool.id === 'merge' && (
+                                  <Badge className="bg-gradient-to-r from-red-500 to-orange-500 text-white text-[10px] px-1.5 py-0 h-4 border-0">
+                                    Popular
+                                  </Badge>
+                                )}
+                              </div>
+                              <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all duration-200 shrink-0" />
                             </div>
                             <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                               {tool.description}
                             </p>
                           </div>
                         </div>
-                    </CardContent>
-                  </Card>
+                      </CardContent>
+                    </Card>
                   </a>
                 );
               })}
@@ -409,34 +502,43 @@ function HomePage() {
       <RecentHistory />
       <ToolsGrid />
 
-      {/* Feature section */}
+      {/* Feature section - "Why Choose PDF Tools?" with glass-morphism */}
       <section className="mx-auto max-w-6xl px-4 sm:px-6 pb-16">
-        <div className="rounded-2xl border bg-gradient-to-br from-muted/50 to-muted/20 p-8 sm:p-10">
-          <h2 className="text-2xl font-bold text-center mb-8">
+        <div className="rounded-2xl border bg-gradient-to-br from-muted/50 to-muted/20 p-8 sm:p-10 relative overflow-hidden">
+          {/* Background decorative glow */}
+          <div className="absolute top-0 right-0 h-40 w-40 rounded-full bg-gradient-to-br from-red-500/5 to-orange-500/5 blur-3xl" />
+          <div className="absolute bottom-0 left-0 h-32 w-32 rounded-full bg-gradient-to-br from-green-500/5 to-emerald-500/5 blur-3xl" />
+
+          <h2 className="text-2xl font-bold text-center mb-8 relative">
             Why Choose PDF Tools?
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            <div className="text-center space-y-3">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
-                <Shield className="h-6 w-6 text-green-600" />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 relative">
+            {/* Private & Secure card - glass-morphism with gradient border */}
+            <div className="text-center space-y-3 p-6 rounded-xl bg-background/50 dark:bg-background/30 backdrop-blur-sm border border-border/50 hover:border-green-300 dark:hover:border-green-700 hover:shadow-lg hover:shadow-green-500/5 hover:scale-[1.02] transition-all duration-300 group">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-green-100 to-emerald-100 dark:from-green-900/40 dark:to-emerald-900/40 group-hover:from-green-200 group-hover:to-emerald-200 dark:group-hover:from-green-900/60 dark:group-hover:to-emerald-900/60 transition-colors duration-300">
+                <Shield className="h-7 w-7 text-green-600 dark:text-green-400" />
               </div>
               <h3 className="font-semibold">Private & Secure</h3>
               <p className="text-sm text-muted-foreground">
                 Files are processed entirely in your browser. Nothing is uploaded to any server.
               </p>
             </div>
-            <div className="text-center space-y-3">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-100">
-                <Zap className="h-6 w-6 text-amber-600" />
+
+            {/* Instant Results card */}
+            <div className="text-center space-y-3 p-6 rounded-xl bg-background/50 dark:bg-background/30 backdrop-blur-sm border border-border/50 hover:border-amber-300 dark:hover:border-amber-700 hover:shadow-lg hover:shadow-amber-500/5 hover:scale-[1.02] transition-all duration-300 group">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-amber-100 to-yellow-100 dark:from-amber-900/40 dark:to-yellow-900/40 group-hover:from-amber-200 group-hover:to-yellow-200 dark:group-hover:from-amber-900/60 dark:group-hover:to-yellow-900/60 transition-colors duration-300">
+                <Zap className="h-7 w-7 text-amber-600 dark:text-amber-400" />
               </div>
               <h3 className="font-semibold">Instant Results</h3>
               <p className="text-sm text-muted-foreground">
                 No waiting for uploads or downloads. Process files instantly on your device.
               </p>
             </div>
-            <div className="text-center space-y-3">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
-                <Globe className="h-6 w-6 text-blue-600" />
+
+            {/* Works Everywhere card */}
+            <div className="text-center space-y-3 p-6 rounded-xl bg-background/50 dark:bg-background/30 backdrop-blur-sm border border-border/50 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-lg hover:shadow-blue-500/5 hover:scale-[1.02] transition-all duration-300 group">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/40 dark:to-indigo-900/40 group-hover:from-blue-200 group-hover:to-indigo-200 dark:group-hover:from-blue-900/60 dark:group-hover:to-indigo-900/60 transition-colors duration-300">
+                <Globe className="h-7 w-7 text-blue-600 dark:text-blue-400" />
               </div>
               <h3 className="font-semibold">Works Everywhere</h3>
               <p className="text-sm text-muted-foreground">

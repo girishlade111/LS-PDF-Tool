@@ -12,7 +12,10 @@ export type ToolId =
   | 'organize'
   | 'pdf-to-text'
   | 'page-numbers'
-  | 'extract-pages';
+  | 'extract-pages'
+  | 'edit-metadata'
+  | 'delete-pages'
+  | 'pdf-to-png';
 
 interface NavStore {
   currentPage: 'home' | ToolId;
