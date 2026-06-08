@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { ChevronRight, Home, ArrowLeft, Upload, Settings2, Play, CheckCircle2, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +12,9 @@ import { ProcessingStatus } from '@/components/shared/processing-status';
 import { DownloadResult } from '@/components/shared/download-result';
 import { ErrorDisplay } from '@/components/shared/error-display';
 import { useFileStore } from '@/store/file-store';
+
+const SITE_NAME = 'LS PDF';
+const DEFAULT_TITLE = `Free Online PDF Editor — Merge, Split, Compress & More | ${SITE_NAME}`;
 
 interface ToolPageProps {
   toolId: string;
