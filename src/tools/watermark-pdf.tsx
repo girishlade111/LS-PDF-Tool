@@ -91,23 +91,27 @@ export function WatermarkPDFTool() {
           />
         </div>
         <div className="space-y-2">
-          <Label>Font Size: {fontSize}px</Label>
+          <Label htmlFor="watermark-font-size">Font Size: {fontSize}px</Label>
           <Slider
+            id="watermark-font-size"
             value={[fontSize]}
             onValueChange={([v]) => setFontSize(v)}
             min={20}
             max={120}
             step={5}
+            aria-label="Watermark font size in pixels"
           />
         </div>
         <div className="space-y-2">
-          <Label>Opacity: {opacity}%</Label>
+          <Label htmlFor="watermark-opacity">Opacity: {opacity}%</Label>
           <Slider
+            id="watermark-opacity"
             value={[opacity]}
             onValueChange={([v]) => setOpacity(v)}
             min={5}
             max={80}
             step={5}
+            aria-label="Watermark opacity percentage"
           />
         </div>
         <div className="space-y-2">
