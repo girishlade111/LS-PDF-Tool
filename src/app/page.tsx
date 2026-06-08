@@ -1738,11 +1738,20 @@ function ToolPageRouter() {
     );
   }
 
+  // The ErrorBoundary `key` is the current page id so navigating to a new
+  // tool remounts the boundary and clears any previously-captured error.
+  // Header & Footer live above the boundary in `Home`, so they stay
+  // visible even if a tool crashes.
   return (
     <div key={currentPage} className="mx-auto max-w-3xl px-4 sm:px-6 py-8 animate-in fade-in slide-in-from-right-2 duration-300">
-      <Suspense fallback={<ToolLoader />}>
-        <ToolComponent />
-      </Suspense>
+      <ErrorBoundary
+        key={currentPage}
+        fallback={<ToolErrorFallback />}
+      >
+        <Suspense fallback={<ToolLoader />}>
+          <ToolComponent />
+        </Suspense>
+      </ErrorBoundary>
     </div>
   );
 }
