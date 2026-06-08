@@ -1249,7 +1249,7 @@ function ToolsGrid() {
               </Badge>
               <div className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 transition-all duration-500">
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 transition-all duration-500">
               {categoryTools.map((tool) => {
                 const Icon = tool.icon;
                 const isNewTool = ['view-pdf', 'header-footer'].includes(tool.id);
@@ -1259,35 +1259,37 @@ function ToolsGrid() {
                   <a
                     key={tool.id}
                     href={`#${tool.id}`}
-                    className="block no-underline"
+                    aria-label={`${tool.name} — ${tool.description}`}
+                    className="block no-underline rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   >
                     <Card className="group cursor-pointer transition-all duration-300 hover:shadow-lg hover:-translate-y-1 hover:shadow-primary/5 border-border/60 relative overflow-hidden before:absolute before:inset-0 before:rounded-lg before:p-[1px] before:bg-gradient-to-br before:from-red-500/0 before:via-orange-500/0 before:to-amber-500/0 hover:before:from-red-500/30 hover:before:via-orange-500/20 hover:before:to-amber-500/30 before:transition-all before:duration-500 before:-z-10 before:pointer-events-none shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)] active:scale-[0.98] h-full">
                       {/* Colored left border */}
-                      <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-lg ${tool.bgColor} opacity-60 group-hover:opacity-100 transition-opacity duration-300`} />
+                      <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-lg ${tool.bgColor} opacity-60 group-hover:opacity-100 transition-opacity duration-300`} aria-hidden="true" />
                       {/* Gradient background */}
-                      <div className="absolute inset-0 bg-gradient-to-br from-card to-muted/10" />
+                      <div className="absolute inset-0 bg-gradient-to-br from-card to-muted/10" aria-hidden="true" />
                       {/* Gradient overlay on hover */}
-                      <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" aria-hidden="true" />
                       {/* Category badge at top-right */}
                       <div className="absolute top-3 right-3 z-10">
                         <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-muted/80 dark:bg-muted/50 text-muted-foreground backdrop-blur-sm">
                           {categoryLabel}
                         </span>
                       </div>
-                      <CardContent className="p-5 relative">
-                        <div className="flex items-start gap-4">
+                      <CardContent className="p-3.5 sm:p-5 relative">
+                        <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
                           <div
-                            className={`p-2.5 rounded-xl ${tool.bgColor} transition-all duration-300 group-hover:scale-110 group-hover:shadow-md group-hover:animate-icon-glow shrink-0`}
+                            className={`p-2 sm:p-2.5 rounded-xl ${tool.bgColor} transition-all duration-300 group-hover:scale-110 group-hover:shadow-md group-hover:animate-icon-glow shrink-0 self-start`}
+                            aria-hidden="true"
                           >
-                            <Icon className={`h-5 w-5 ${tool.color}`} />
+                            <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${tool.color}`} />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between gap-2">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <h3 className="font-semibold text-base relative">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <h3 className="font-semibold text-sm sm:text-base relative">
                                   {tool.name}
                                   {/* Animated underline on hover */}
-                                  <span className="absolute -bottom-0.5 left-0 h-0.5 w-0 bg-gradient-to-r from-red-500 to-orange-500 group-hover:w-full transition-all duration-300" />
+                                  <span className="absolute -bottom-0.5 left-0 h-0.5 w-0 bg-gradient-to-r from-red-500 to-orange-500 group-hover:w-full transition-all duration-300" aria-hidden="true" />
                                 </h3>
                                 {/* Popular badge for Merge PDF */}
                                 {tool.id === 'merge' && (
@@ -1303,14 +1305,14 @@ function ToolsGrid() {
                                 )}
                                 {isAITool && (
                                   <Badge className="bg-gradient-to-r from-violet-500 to-purple-500 text-white text-[10px] px-1.5 py-0 h-4 border-0 gap-0.5">
-                                    <Sparkles className="h-2.5 w-2.5" />
+                                    <Sparkles className="h-2.5 w-2.5" aria-hidden="true" />
                                     AI
                                   </Badge>
                                 )}
                               </div>
-                              <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all duration-200 shrink-0" />
+                              <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all duration-200 shrink-0" aria-hidden="true" />
                             </div>
-                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                            <p className="text-[11px] sm:text-xs text-muted-foreground mt-1 line-clamp-2">
                               {tool.description}
                             </p>
                           </div>
