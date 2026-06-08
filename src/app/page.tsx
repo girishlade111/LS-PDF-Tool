@@ -40,7 +40,6 @@ import { useNavStore } from '@/store/nav-store';
 import { useFileStore } from '@/store/file-store';
 import { tools, categories, getToolById } from '@/lib/tools';
 import { Separator } from '@/components/ui/separator';
-import { ErrorBoundary as LegacyErrorBoundary } from '@/components/shared/error-boundary';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { ToolErrorFallback } from '@/components/common/ToolErrorFallback';
 import { RecentHistory } from '@/components/common/RecentHistory';
