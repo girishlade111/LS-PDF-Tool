@@ -18,7 +18,7 @@ interface ToolPageProps {
   multiple?: boolean;
   maxFiles?: number;
   children: React.ReactNode;
-  actionButton: React.ReactNode;
+  actionButton?: React.ReactNode;
 }
 
 function StepIndicator({ currentStep }: { currentStep: 1 | 2 | 3 }) {
@@ -164,7 +164,7 @@ export function ToolPage({
       )}
 
       {/* Action Button */}
-      {processingState === 'idle' && (
+      {processingState === 'idle' && actionButton && (
         <div className={files.length === 0 ? 'opacity-40 pointer-events-none' : ''}>
           {actionButton}
         </div>

@@ -28,9 +28,11 @@ export function FileDropzone({
   onFilesAdded,
 }: FileDropzoneProps) {
   const [isDragging, setIsDragging] = useState(false);
+  const [dragCount, setDragCount] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { addFiles } = useFileStore();
   const isPDF = accept.includes('pdf');
+  const isImage = accept.includes('jpg') || accept.includes('png') || accept.includes('image');
 
   const processFiles = useCallback(async (fileList: FileList | File[]) => {
     const files = Array.from(fileList);
@@ -85,18 +87,30 @@ export function FileDropzone({
     }
   }, [addFiles, maxSize, onFilesAdded]);
 
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragCount((prev) => prev + 1);
+    setIsDragging(true);
+  }, []);
+
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
-    setIsDragging(true);
   }, []);
 
   const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault();
-    setIsDragging(false);
+    setDragCount((prev) => {
+      const newCount = prev - 1;
+      if (newCount === 0) {
+        setIsDragging(false);
+      }
+      return newCount;
+    });
   }, []);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
+    setDragCount(0);
     setIsDragging(false);
     if (e.dataTransfer.files.length > 0) {
       processFiles(e.dataTransfer.files);
@@ -124,6 +138,12 @@ export function FileDropzone({
           : 'border-2 border-dashed border-muted-foreground/25 hover:border-primary/60 hover:bg-muted/30'
         }
       `}
+      style={!isDragging ? {
+        backgroundSize: '0% 2px',
+        backgroundRepeat: 'no-repeat',
+        backgroundPosition: 'bottom',
+      } : undefined}
+      onDragEnter={handleDragEnter}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -147,11 +167,31 @@ export function FileDropzone({
         className="hidden"
       />
 
+      {/* Animated dashed border when idle */}
+      {!isDragging && (
+        <div className="absolute inset-0 rounded-xl pointer-events-none overflow-hidden">
+          <div className="absolute inset-0 animate-border-dance opacity-30" style={{
+            maskImage: 'linear-gradient(#000 0 0)',
+            WebkitMaskComposite: 'xor',
+            maskComposite: 'exclude',
+          }} />
+        </div>
+      )}
+
       {/* Background decoration when dragging */}
       {isDragging && (
         <div className="absolute inset-0 -z-10">
           <div className="absolute top-1/4 left-1/4 h-32 w-32 rounded-full bg-primary/10 blur-2xl animate-pulse" />
           <div className="absolute bottom-1/4 right-1/4 h-24 w-24 rounded-full bg-primary/8 blur-2xl animate-pulse" />
+        </div>
+      )}
+
+      {/* Drag count indicator */}
+      {isDragging && dragCount > 0 && (
+        <div className="absolute top-3 right-3 z-10">
+          <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-primary text-primary-foreground animate-pulse">
+            {dragCount} file{dragCount !== 1 ? 's' : ''} dragging
+          </span>
         </div>
       )}
 
@@ -162,13 +202,14 @@ export function FileDropzone({
             ? 'bg-primary/15 text-primary scale-110'
             : 'bg-muted/80 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary group-hover:scale-105'
           }
-        `}>
+          ${!isDragging ? 'animate-float' : ''}
+        `} style={!isDragging ? { animationDuration: '3s' } : undefined}>
           {isDragging ? (
-            <FileUp className="h-8 w-8" />
+            <FileUp className="h-10 w-10" />
           ) : isPDF ? (
-            <FileText className="h-8 w-8" />
+            <FileText className="h-10 w-10" />
           ) : (
-            <ImageIcon className="h-8 w-8" />
+            <ImageIcon className="h-10 w-10" />
           )}
         </div>
 
@@ -179,11 +220,47 @@ export function FileDropzone({
           <p className="text-sm text-muted-foreground mt-1.5">{description}</p>
         </div>
 
+        {/* File type icons row */}
+        <div className="flex items-center gap-2 mt-1">
+          {isPDF && (
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400">
+              <FileText className="h-3.5 w-3.5" />
+              <span className="text-[10px] font-medium">PDF</span>
+            </div>
+          )}
+          {isImage && (
+            <>
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-blue-50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400">
+                <ImageIcon className="h-3.5 w-3.5" />
+                <span className="text-[10px] font-medium">JPG</span>
+              </div>
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400">
+                <ImageIcon className="h-3.5 w-3.5" />
+                <span className="text-[10px] font-medium">PNG</span>
+              </div>
+            </>
+          )}
+          {!isPDF && !isImage && (
+            <>
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400">
+                <FileText className="h-3.5 w-3.5" />
+                <span className="text-[10px] font-medium">PDF</span>
+              </div>
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-blue-50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400">
+                <ImageIcon className="h-3.5 w-3.5" />
+                <span className="text-[10px] font-medium">JPG</span>
+              </div>
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400">
+                <ImageIcon className="h-3.5 w-3.5" />
+                <span className="text-[10px] font-medium">PNG</span>
+              </div>
+            </>
+          )}
+        </div>
+
         <div className="flex items-center gap-3 text-xs text-muted-foreground/70">
-          <span className="flex items-center gap-1 px-2 py-1 rounded-md bg-muted/50">
-            {isPDF ? 'PDF' : 'JPG / PNG'}
-          </span>
           <span>Max {maxSize / (1024 * 1024)}MB per file</span>
+          {multiple && <span>·</span>}
           {multiple && <span>Up to {maxFiles} files</span>}
         </div>
       </div>

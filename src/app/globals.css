@@ -313,3 +313,114 @@
 .animate-glow {
   animation: glow-pulse 3s ease-in-out infinite;
 }
+
+/* Animated dashed border for dropzone */
+@keyframes border-dance {
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: 200% 0%;
+  }
+}
+
+.animate-border-dance {
+  background-image: repeating-linear-gradient(
+    90deg,
+    oklch(0.708 0 0 / 0.4) 0px,
+    oklch(0.708 0 0 / 0.4) 8px,
+    transparent 8px,
+    transparent 16px
+  );
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  background-position: 0% 0%;
+  animation: border-dance 12s linear infinite;
+}
+
+.dark .animate-border-dance {
+  background-image: repeating-linear-gradient(
+    90deg,
+    oklch(0.556 0 0 / 0.4) 0px,
+    oklch(0.556 0 0 / 0.4) 8px,
+    transparent 8px,
+    transparent 16px
+  );
+}
+
+/* Slide in from right */
+@keyframes slide-in-right {
+  0% {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s ease-out forwards;
+}
+
+/* Slide in from left */
+@keyframes slide-in-left {
+  0% {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in-left {
+  animation: slide-in-left 0.3s ease-out forwards;
+}
+
+/* Staggered fade-in for list items */
+@keyframes stagger-fade-in {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-stagger-fade-in {
+  animation: stagger-fade-in 0.3s ease-out forwards;
+  opacity: 0;
+}
+
+/* Pulse glow for CTA buttons */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px oklch(0.6 0.2 25 / 0.2);
+  }
+  50% {
+    box-shadow: 0 0 35px oklch(0.6 0.2 25 / 0.4);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2.5s ease-in-out infinite;
+}
+
+/* Icon glow pulse on hover */
+@keyframes icon-glow {
+  0%, 100% {
+    box-shadow: 0 0 0px oklch(0.7 0.15 25 / 0);
+  }
+  50% {
+    box-shadow: 0 0 12px oklch(0.7 0.15 25 / 0.3);
+  }
+}
+
+.animate-icon-glow {
+  animation: icon-glow 2s ease-in-out infinite;
+}

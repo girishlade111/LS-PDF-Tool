@@ -17,7 +17,11 @@ export type ToolId =
   | 'delete-pages'
   | 'pdf-to-png'
   | 'flatten'
-  | 'crop-pdf';
+  | 'crop-pdf'
+  | 'unlock'
+  | 'repair'
+  | 'redact'
+  | 'compare';
 
 interface NavStore {
   currentPage: 'home' | ToolId;

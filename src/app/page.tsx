@@ -86,6 +86,18 @@ const FlattenPDFTool = lazy(() =>
 const CropPDFTool = lazy(() =>
   import('@/tools/crop-pdf').then((m) => ({ default: m.CropPDFTool }))
 );
+const UnlockPDFTool = lazy(() =>
+  import('@/tools/unlock-pdf').then((m) => ({ default: m.UnlockPDFTool }))
+);
+const RepairPDFTool = lazy(() =>
+  import('@/tools/repair-pdf').then((m) => ({ default: m.RepairPDFTool }))
+);
+const RedactPDFTool = lazy(() =>
+  import('@/tools/redact-pdf').then((m) => ({ default: m.RedactPDFTool }))
+);
+const ComparePDFTool = lazy(() =>
+  import('@/tools/compare-pdf').then((m) => ({ default: m.ComparePDFTool }))
+);
 
 const toolComponents: Record<string, React.LazyExoticComponent<React.ComponentType>> = {
   merge: MergePDFTool,
@@ -105,14 +117,47 @@ const toolComponents: Record<string, React.LazyExoticComponent<React.ComponentTy
   'pdf-to-png': PDFToPNGTool,
   'flatten': FlattenPDFTool,
   'crop-pdf': CropPDFTool,
+  'unlock': UnlockPDFTool,
+  'repair': RepairPDFTool,
+  'redact': RedactPDFTool,
+  'compare': ComparePDFTool,
 };
 
 function ToolLoader() {
   return (
-    <div className="flex items-center justify-center py-20">
-      <div className="flex flex-col items-center gap-3">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-        <p className="text-sm text-muted-foreground">Loading tool...</p>
+    <div className="mx-auto max-w-3xl px-4 sm:px-6 py-8 space-y-6 animate-in fade-in duration-300">
+      {/* Skeleton breadcrumb bar */}
+      <div className="flex items-center gap-2">
+        <div className="h-4 w-16 rounded bg-muted animate-pulse" />
+        <div className="h-3 w-3 rounded bg-muted/50 animate-pulse" />
+        <div className="h-4 w-24 rounded bg-muted animate-pulse" />
+      </div>
+
+      {/* Skeleton icon + title */}
+      <div className="flex items-center gap-4 p-6 rounded-2xl border bg-card">
+        <div className="h-12 w-12 rounded-xl bg-muted animate-pulse shrink-0" />
+        <div className="flex-1 space-y-2">
+          <div className="h-6 w-48 rounded bg-muted animate-pulse" />
+          <div className="h-4 w-72 rounded bg-muted/70 animate-pulse" />
+        </div>
+      </div>
+
+      {/* Skeleton dropzone area */}
+      <div className="rounded-xl border-2 border-dashed border-muted-foreground/15 p-8 sm:p-10 space-y-4">
+        <div className="flex justify-center">
+          <div className="h-12 w-12 rounded-2xl bg-muted animate-pulse" />
+        </div>
+        <div className="flex justify-center">
+          <div className="h-5 w-32 rounded bg-muted animate-pulse" />
+        </div>
+        <div className="flex justify-center">
+          <div className="h-4 w-48 rounded bg-muted/70 animate-pulse" />
+        </div>
+      </div>
+
+      {/* Skeleton action button */}
+      <div className="flex justify-center pt-2">
+        <div className="h-10 w-40 rounded-lg bg-muted animate-pulse" />
       </div>
     </div>
   );
@@ -406,7 +451,7 @@ function HowItWorksSection() {
     {
       number: 2,
       title: 'Choose Your Tool',
-      description: 'Select from 15+ tools: merge, split, compress, rotate, watermark, and more.',
+      description: 'Select from 20+ tools: merge, split, compress, rotate, watermark, and more.',
       icon: Wrench,
     },
     {
@@ -518,7 +563,7 @@ function StatsSection() {
   }, []);
 
   const statDefs = [
-    { target: 15, suffix: '+', label: 'PDF Tools' },
+    { target: 21, suffix: '+', label: 'PDF Tools' },
     { target: 100, suffix: '%', label: 'Free Forever' },
     { target: 0, suffix: '', label: 'Data Uploads' },
     { target: 50, suffix: 'K+', label: 'Happy Users' },
@@ -650,19 +695,34 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
   const inputRef = useRef<HTMLInputElement>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [prevOpen, setPrevOpen] = useState(false);
+  const [searchCategory, setSearchCategory] = useState<string | null>(null);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
 
-  const filteredTools = query.trim()
-    ? tools.filter((t) =>
-        t.name.toLowerCase().includes(query.toLowerCase()) ||
-        t.description.toLowerCase().includes(query.toLowerCase())
-      )
-    : tools;
+  // Category tabs for search filtering
+  const searchTabs = [
+    { id: null, label: 'All' },
+    ...categories.map((c) => ({ id: c.id as string | null, label: c.name })),
+  ];
+
+  const filteredTools = (() => {
+    let result = query.trim()
+      ? tools.filter((t) =>
+          t.name.toLowerCase().includes(query.toLowerCase()) ||
+          t.description.toLowerCase().includes(query.toLowerCase())
+        )
+      : tools;
+    if (searchCategory) {
+      result = result.filter((t) => t.category === searchCategory);
+    }
+    return result;
+  })();
 
   // Reset state when dialog opens (derived from open prop change)
   if (open && !prevOpen) {
     setPrevOpen(true);
     setQuery('');
     setSelectedIndex(0);
+    setSearchCategory(null);
   }
   if (!open && prevOpen) {
     setPrevOpen(false);
@@ -676,12 +736,39 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
     }
   }, [open]);
 
+  // Load recent searches when dialog opens (derived state, not in effect)
+  if (open && !prevOpen) {
+    try {
+      const stored = localStorage.getItem('pdf-tools-recent-searches');
+      if (stored) {
+        const parsed = JSON.parse(stored).slice(0, 5);
+        if (JSON.stringify(parsed) !== JSON.stringify(recentSearches)) {
+          setRecentSearches(parsed);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+
   // Derive selectedIndex reset from query change
   const effectiveSelectedIndex = Math.min(selectedIndex, Math.max(filteredTools.length - 1, 0));
 
   const handleSelect = (toolId: string) => {
     navigate(toolId as Parameters<typeof navigate>[0]);
     onClose();
+    // Save to recent searches
+    try {
+      const tool = tools.find((t) => t.id === toolId);
+      if (tool) {
+        const stored = localStorage.getItem('pdf-tools-recent-searches');
+        const existing: string[] = stored ? JSON.parse(stored) : [];
+        const updated = [tool.name, ...existing.filter((n) => n !== tool.name)].slice(0, 5);
+        localStorage.setItem('pdf-tools-recent-searches', JSON.stringify(updated));
+      }
+    } catch {
+      // ignore
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -707,7 +794,7 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
       />
 
       {/* Dialog */}
-      <div className="fixed left-1/2 top-[20%] -translate-x-1/2 z-[101] w-full max-w-lg">
+      <div className="fixed left-1/2 top-[15%] -translate-x-1/2 z-[101] w-full max-w-lg">
         <div className="mx-4 rounded-xl border bg-card shadow-2xl animate-in fade-in slide-in-from-top-4 duration-200 overflow-hidden">
           {/* Search input */}
           <div className="flex items-center gap-3 border-b px-4 py-3">
@@ -725,11 +812,36 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
             </kbd>
           </div>
 
+          {/* Category tabs */}
+          <div className="flex items-center gap-1 px-3 py-2 border-b overflow-x-auto scrollbar-thin">
+            {searchTabs.map((tab) => (
+              <button
+                key={tab.label}
+                onClick={() => { setSearchCategory(tab.id); setSelectedIndex(0); }}
+                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors duration-150 whitespace-nowrap ${
+                  searchCategory === tab.id
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
           {/* Results */}
-          <div className="max-h-80 overflow-y-auto p-2">
+          <div className="max-h-72 overflow-y-auto p-2">
             {filteredTools.length === 0 ? (
-              <div className="py-8 text-center text-sm text-muted-foreground">
-                No tools found for &ldquo;{query}&rdquo;
+              <div className="py-8 text-center">
+                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted/50">
+                  <Search className="h-5 w-5 text-muted-foreground/50" />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  No tools found for &ldquo;{query}&rdquo;
+                </p>
+                <p className="text-xs text-muted-foreground/60 mt-1">
+                  Try a different search term or category
+                </p>
               </div>
             ) : (
               filteredTools.map((tool, index) => {
@@ -738,11 +850,12 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
                   <button
                     key={tool.id}
                     onClick={() => handleSelect(tool.id)}
-                    className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors duration-100 ${
+                    className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors duration-100 animate-stagger-fade-in ${
                       index === effectiveSelectedIndex
                         ? 'bg-primary/10 text-foreground'
                         : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
                     }`}
+                    style={{ animationDelay: `${index * 40}ms` }}
                   >
                     <div className={`p-1.5 rounded-lg ${tool.bgColor} shrink-0`}>
                       <Icon className={`h-4 w-4 ${tool.color}`} />
@@ -759,6 +872,32 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
               })
             )}
           </div>
+
+          {/* Recent searches section */}
+          {recentSearches.length > 0 && !query.trim() && (
+            <div className="border-t px-4 py-2.5">
+              <div className="text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wider mb-1.5">
+                Recent
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {recentSearches.map((search) => {
+                  const tool = tools.find((t) => t.name === search);
+                  if (!tool) return null;
+                  const RIcon = tool.icon;
+                  return (
+                    <button
+                      key={search}
+                      onClick={() => handleSelect(tool.id)}
+                      className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted/50 text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150"
+                    >
+                      <RIcon className="h-3 w-3" />
+                      {search}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Footer */}
           <div className="border-t px-4 py-2 flex items-center gap-4 text-xs text-muted-foreground">
@@ -873,7 +1012,7 @@ function HeroSection() {
         <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
           <Button
             size="lg"
-            className="w-full sm:w-auto bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white shadow-lg shadow-red-500/25 animate-glow"
+            className="w-full sm:w-auto bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white shadow-lg shadow-red-500/25 animate-pulse-glow"
             onClick={() => navigate('merge')}
           >
             Get Started
@@ -966,28 +1105,36 @@ function ToolsGrid() {
               </Badge>
               <div className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 transition-all duration-500">
               {categoryTools.map((tool) => {
                 const Icon = tool.icon;
+                const isNewTool = ['flatten', 'crop-pdf', 'unlock', 'repair', 'redact', 'compare'].includes(tool.id);
+                const categoryLabel = categories.find((c) => c.id === tool.category)?.name || tool.category;
                 return (
                   <a
                     key={tool.id}
                     href={`#${tool.id}`}
                     className="block no-underline"
                   >
-                    <Card className="group cursor-pointer transition-all duration-300 hover:shadow-lg hover:-translate-y-1 hover:shadow-primary/5 border-muted relative overflow-hidden">
+                    <Card className="group cursor-pointer transition-all duration-300 hover:shadow-lg hover:-translate-y-1 hover:shadow-primary/5 border-muted relative overflow-hidden before:absolute before:inset-0 before:rounded-lg before:p-[1px] before:bg-gradient-to-br before:from-red-500/0 before:via-orange-500/0 before:to-amber-500/0 hover:before:from-red-500/30 hover:before:via-orange-500/20 hover:before:to-amber-500/30 before:transition-all before:duration-500 before:-z-10 before:pointer-events-none">
                       {/* Gradient overlay on hover */}
                       <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      {/* Category badge at top-right */}
+                      <div className="absolute top-3 right-3 z-10">
+                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-muted/80 dark:bg-muted/50 text-muted-foreground backdrop-blur-sm">
+                          {categoryLabel}
+                        </span>
+                      </div>
                       <CardContent className="p-5 relative">
                         <div className="flex items-start gap-4">
                           <div
-                            className={`p-2.5 rounded-xl ${tool.bgColor} transition-all duration-300 group-hover:scale-110 group-hover:shadow-md shrink-0`}
+                            className={`p-2.5 rounded-xl ${tool.bgColor} transition-all duration-300 group-hover:scale-110 group-hover:shadow-md group-hover:animate-icon-glow shrink-0`}
                           >
                             <Icon className={`h-5 w-5 ${tool.color}`} />
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-2">
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 flex-wrap">
                                 <h3 className="font-semibold text-sm relative">
                                   {tool.name}
                                   {/* Animated underline on hover */}
@@ -997,6 +1144,12 @@ function ToolsGrid() {
                                 {tool.id === 'merge' && (
                                   <Badge className="bg-gradient-to-r from-red-500 to-orange-500 text-white text-[10px] px-1.5 py-0 h-4 border-0">
                                     Popular
+                                  </Badge>
+                                )}
+                                {/* New badge for newest tools */}
+                                {isNewTool && (
+                                  <Badge className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-[10px] px-1.5 py-0 h-4 border-0">
+                                    New
                                   </Badge>
                                 )}
                               </div>
@@ -1020,6 +1173,53 @@ function ToolsGrid() {
   );
 }
 
+// ─── Why Choose Counter ─────────────────────────────────────────────────────────
+
+function WhyChooseCounter({ target, suffix }: { target: number; suffix: string }) {
+  const [count, setCount] = useState(0);
+  const [isVisible, setIsVisible] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+        }
+      },
+      { threshold: 0.5 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!isVisible) return;
+    const duration = 1200;
+    let startTime: number;
+    let animationFrame: number;
+    const animate = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const progress = Math.min((timestamp - startTime) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setCount(Math.floor(eased * target));
+      if (progress < 1) {
+        animationFrame = requestAnimationFrame(animate);
+      }
+    };
+    animationFrame = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animationFrame);
+  }, [isVisible, target]);
+
+  return (
+    <div ref={ref} className="text-xs font-semibold text-primary/80 mt-1">
+      {count}{suffix}
+    </div>
+  );
+}
+
 // ─── Home Page ─────────────────────────────────────────────────────────────────
 
 function HomePage() {
@@ -1033,6 +1233,15 @@ function HomePage() {
       {/* Feature section - "Why Choose PDF Tools?" with glass-morphism */}
       <section className="mx-auto max-w-6xl px-4 sm:px-6 pb-16">
         <div className="rounded-2xl border bg-gradient-to-br from-muted/50 to-muted/20 p-8 sm:p-10 relative overflow-hidden">
+          {/* Animated background particles/shapes */}
+          <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
+            <div className="absolute top-[10%] left-[15%] h-6 w-6 rounded-full bg-green-500/10 animate-float" />
+            <div className="absolute top-[30%] right-[20%] h-4 w-4 rounded-full bg-amber-500/10 animate-float-delay-1" />
+            <div className="absolute bottom-[20%] left-[30%] h-5 w-5 rounded-full bg-blue-500/10 animate-float-delay-2" />
+            <div className="absolute top-[50%] right-[10%] h-3 w-3 rounded-full bg-red-500/10 animate-float-delay-3" />
+            <div className="absolute bottom-[40%] left-[8%] h-4 w-4 rounded-full bg-orange-500/8 animate-float" style={{ animationDuration: '5s' }} />
+            <div className="absolute top-[15%] right-[40%] h-5 w-5 rounded-full bg-emerald-500/8 animate-float-delay-2" style={{ animationDuration: '7s' }} />
+          </div>
           {/* Background decorative glow */}
           <div className="absolute top-0 right-0 h-40 w-40 rounded-full bg-gradient-to-br from-red-500/5 to-orange-500/5 blur-3xl" />
           <div className="absolute bottom-0 left-0 h-32 w-32 rounded-full bg-gradient-to-br from-green-500/5 to-emerald-500/5 blur-3xl" />
@@ -1041,8 +1250,16 @@ function HomePage() {
             Why Choose PDF Tools?
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 relative">
+            {/* Connecting dotted lines between cards (visible on sm+) */}
+            <div className="hidden sm:block absolute top-1/2 -translate-y-1/2 z-0" style={{ left: '33%', width: '34%' }}>
+              <div className="w-full border-t-2 border-dashed border-green-300/40 dark:border-green-700/30" />
+            </div>
+            <div className="hidden sm:block absolute top-1/2 -translate-y-1/2 z-0" style={{ left: '66%', width: '34%' }}>
+              <div className="w-full border-t-2 border-dashed border-amber-300/40 dark:border-amber-700/30" />
+            </div>
+
             {/* Private & Secure card - glass-morphism with gradient border */}
-            <div className="text-center space-y-3 p-6 rounded-xl bg-background/50 dark:bg-background/30 backdrop-blur-sm border border-border/50 hover:border-green-300 dark:hover:border-green-700 hover:shadow-lg hover:shadow-green-500/5 hover:scale-[1.02] transition-all duration-300 group">
+            <div className="text-center space-y-3 p-6 rounded-xl bg-background/50 dark:bg-background/30 backdrop-blur-sm border border-border/50 hover:border-green-300 dark:hover:border-green-700 hover:shadow-lg hover:shadow-green-500/5 hover:scale-[1.02] hover:rotate-1 transition-all duration-300 group relative z-10">
               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-green-100 to-emerald-100 dark:from-green-900/40 dark:to-emerald-900/40 group-hover:from-green-200 group-hover:to-emerald-200 dark:group-hover:from-green-900/60 dark:group-hover:to-emerald-900/60 transition-colors duration-300">
                 <Shield className="h-7 w-7 text-green-600 dark:text-green-400" />
               </div>
@@ -1050,10 +1267,11 @@ function HomePage() {
               <p className="text-sm text-muted-foreground">
                 Files are processed entirely in your browser. Nothing is uploaded to any server.
               </p>
+              <WhyChooseCounter target={0} suffix=" Data Uploads" />
             </div>
 
             {/* Instant Results card */}
-            <div className="text-center space-y-3 p-6 rounded-xl bg-background/50 dark:bg-background/30 backdrop-blur-sm border border-border/50 hover:border-amber-300 dark:hover:border-amber-700 hover:shadow-lg hover:shadow-amber-500/5 hover:scale-[1.02] transition-all duration-300 group">
+            <div className="text-center space-y-3 p-6 rounded-xl bg-background/50 dark:bg-background/30 backdrop-blur-sm border border-border/50 hover:border-amber-300 dark:hover:border-amber-700 hover:shadow-lg hover:shadow-amber-500/5 hover:scale-[1.02] hover:-rotate-1 transition-all duration-300 group relative z-10">
               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-amber-100 to-yellow-100 dark:from-amber-900/40 dark:to-yellow-900/40 group-hover:from-amber-200 group-hover:to-yellow-200 dark:group-hover:from-amber-900/60 dark:group-hover:to-yellow-900/60 transition-colors duration-300">
                 <Zap className="h-7 w-7 text-amber-600 dark:text-amber-400" />
               </div>
@@ -1061,10 +1279,11 @@ function HomePage() {
               <p className="text-sm text-muted-foreground">
                 No waiting for uploads or downloads. Process files instantly on your device.
               </p>
+              <WhyChooseCounter target={100} suffix="% Client-Side" />
             </div>
 
             {/* Works Everywhere card */}
-            <div className="text-center space-y-3 p-6 rounded-xl bg-background/50 dark:bg-background/30 backdrop-blur-sm border border-border/50 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-lg hover:shadow-blue-500/5 hover:scale-[1.02] transition-all duration-300 group">
+            <div className="text-center space-y-3 p-6 rounded-xl bg-background/50 dark:bg-background/30 backdrop-blur-sm border border-border/50 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-lg hover:shadow-blue-500/5 hover:scale-[1.02] hover:rotate-1 transition-all duration-300 group relative z-10">
               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/40 dark:to-indigo-900/40 group-hover:from-blue-200 group-hover:to-indigo-200 dark:group-hover:from-blue-900/60 dark:group-hover:to-indigo-900/60 transition-colors duration-300">
                 <Globe className="h-7 w-7 text-blue-600 dark:text-blue-400" />
               </div>
@@ -1072,6 +1291,7 @@ function HomePage() {
               <p className="text-sm text-muted-foreground">
                 Use on any device with a modern browser. Desktop, tablet, or mobile.
               </p>
+              <WhyChooseCounter target={21} suffix="+ Tools" />
             </div>
           </div>
         </div>
@@ -1100,17 +1320,25 @@ function ToolPageRouter() {
   }, [currentPage, resetAll]);
 
   if (currentPage === 'home') {
-    return <HomePage />;
+    return (
+      <div key="home" className="animate-in fade-in slide-in-from-left-2 duration-300">
+        <HomePage />
+      </div>
+    );
   }
 
   const ToolComponent = toolComponents[currentPage];
 
   if (!ToolComponent) {
-    return <HomePage />;
+    return (
+      <div key="home" className="animate-in fade-in slide-in-from-left-2 duration-300">
+        <HomePage />
+      </div>
+    );
   }
 
   return (
-    <div className="mx-auto max-w-3xl px-4 sm:px-6 py-8">
+    <div key={currentPage} className="mx-auto max-w-3xl px-4 sm:px-6 py-8 animate-in fade-in slide-in-from-right-2 duration-300">
       <Suspense fallback={<ToolLoader />}>
         <ToolComponent />
       </Suspense>

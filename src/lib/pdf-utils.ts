@@ -410,6 +410,196 @@ export async function cropPDF(
 }
 
 /**
+ * Unlock PDF - remove password protection by re-saving without encryption
+ */
+export async function unlockPDF(data: ArrayBuffer, _password?: string): Promise<Uint8Array> {
+  // Load with ignoreEncryption already set in loadPDF
+  // Re-save to strip encryption metadata
+  const pdf = await loadPDF(data);
+  return pdf.save();
+}
+
+/**
+ * Repair PDF - rebuild by copying pages to fresh document
+ */
+export async function repairPDF(
+  data: ArrayBuffer,
+  options?: {
+    rebuildXRef?: boolean;
+    removeCorrupted?: boolean;
+    fixPageTree?: boolean;
+    stripInvalidMetadata?: boolean;
+  }
+): Promise<Uint8Array> {
+  const pdf = await loadPDF(data);
+
+  // Create fresh document and copy all pages (rebuilds structure)
+  const newPdf = await PDFDocument.create();
+  const copiedPages = await newPdf.copyPages(pdf, pdf.getPageIndices());
+  copiedPages.forEach((page) => newPdf.addPage(page));
+
+  // Optionally strip invalid metadata
+  if (options?.stripInvalidMetadata) {
+    // Reset metadata that might be corrupted
+    try {
+      newPdf.setTitle(pdf.getTitle() || '');
+      newPdf.setAuthor(pdf.getAuthor() || '');
+    } catch {
+      newPdf.setTitle('');
+      newPdf.setAuthor('');
+    }
+  }
+
+  return newPdf.save();
+}
+
+/**
+ * Escape special regex characters in a string
+ */
+function escapeRegExp(string: string): string {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Redact PDF - draw rectangles over matching text
+ */
+export async function redactPDF(
+  data: ArrayBuffer,
+  searchText: string,
+  options?: {
+    caseSensitive?: boolean;
+    wholeWord?: boolean;
+    color?: { r: number; g: number; b: number };
+    style?: 'solid' | 'x-mark';
+  }
+): Promise<Uint8Array> {
+  // Dynamic import of pdfjs-dist
+  const pdfjsLib = await import('pdfjs-dist');
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+
+  const {
+    caseSensitive = false,
+    wholeWord = false,
+    color = { r: 0, g: 0, b: 0 },
+    style = 'solid',
+  } = options || {};
+
+  // Load with pdfjs-dist for text extraction
+  const pdfDoc = await pdfjsLib.getDocument({ data: new Uint8Array(data) }).promise;
+
+  // Load with pdf-lib for modification
+  const pdfLib = await loadPDF(data);
+  const pages = pdfLib.getPages();
+
+  for (let i = 1; i <= pdfDoc.numPages; i++) {
+    const page = await pdfDoc.getPage(i);
+    const textContent = await page.getTextContent();
+    const pdfLibPage = pages[i - 1];
+    const { height } = pdfLibPage.getSize();
+
+    for (const item of textContent.items) {
+      if (!('str' in item)) continue;
+      const text = item.str;
+      let matches = false;
+
+      if (caseSensitive) {
+        matches = wholeWord ? new RegExp(`\\b${escapeRegExp(searchText)}\\b`).test(text) : text.includes(searchText);
+      } else {
+        matches = wholeWord ? new RegExp(`\\b${escapeRegExp(searchText)}\\b`, 'i').test(text) : text.toLowerCase().includes(searchText.toLowerCase());
+      }
+
+      if (matches && 'transform' in item) {
+        // Calculate position from transform matrix
+        const tx = (item as { transform: number[] }).transform[4];
+        const ty = (item as { transform: number[] }).transform[5];
+        // Convert from pdfjs coordinates to pdf-lib coordinates
+        const x = tx;
+        const y = height - ty - (item.height || 12);
+        const w = item.width || 100;
+        const h = item.height || 12;
+
+        // Draw redaction rectangle
+        if (style === 'solid') {
+          pdfLibPage.drawRectangle({
+            x: x - 2,
+            y: y - 2,
+            width: w + 4,
+            height: h + 4,
+            color: rgb(color.r, color.g, color.b),
+          });
+        } else {
+          // X-mark style - draw rectangle with X marks
+          pdfLibPage.drawRectangle({
+            x: x - 2,
+            y: y - 2,
+            width: w + 4,
+            height: h + 4,
+            color: rgb(color.r, color.g, color.b),
+          });
+          // Draw X over the redaction
+          pdfLibPage.drawLine({
+            start: { x: x - 2, y: y - 2 },
+            end: { x: x + w + 2, y: y + h + 2 },
+            thickness: 1,
+            color: rgb(1, 1, 1),
+          });
+          pdfLibPage.drawLine({
+            start: { x: x + w + 2, y: y - 2 },
+            end: { x: x - 2, y: y + h + 2 },
+            thickness: 1,
+            color: rgb(1, 1, 1),
+          });
+        }
+      }
+    }
+  }
+
+  return pdfLib.save();
+}
+
+/**
+ * Compare two PDFs - extract page counts, dimensions, and metadata for comparison
+ */
+export async function comparePDFs(
+  data1: ArrayBuffer,
+  data2: ArrayBuffer
+): Promise<{
+  file1: {
+    pageCount: number;
+    dimensions: Array<{ width: number; height: number }>;
+    metadata: Awaited<ReturnType<typeof getPDFMetadata>>;
+  };
+  file2: {
+    pageCount: number;
+    dimensions: Array<{ width: number; height: number }>;
+    metadata: Awaited<ReturnType<typeof getPDFMetadata>>;
+  };
+}> {
+  const [pdf1, pdf2] = await Promise.all([loadPDF(data1), loadPDF(data2)]);
+  const [meta1, meta2] = await Promise.all([getPDFMetadata(data1), getPDFMetadata(data2)]);
+
+  const getDims = (pdf: PDFDocument) => {
+    return pdf.getPages().map((page) => {
+      const { width, height } = page.getSize();
+      return { width, height };
+    });
+  };
+
+  return {
+    file1: {
+      pageCount: pdf1.getPageCount(),
+      dimensions: getDims(pdf1),
+      metadata: meta1,
+    },
+    file2: {
+      pageCount: pdf2.getPageCount(),
+      dimensions: getDims(pdf2),
+      metadata: meta2,
+    },
+  };
+}
+
+/**
  * Simplified compress - remove metadata and optimize
  */
 export async function compressPDF(

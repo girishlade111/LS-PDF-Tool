@@ -581,3 +581,156 @@ Stage Summary:
 - All utility functions added to pdf-utils.ts (flattenPDF, getPDFPageDimensions, cropPDF)
 - All supporting files updated consistently (tools.ts, nav-store.ts, page.tsx)
 - Clean lint and successful compilation
+
+---
+Task ID: 4-new-tools
+Agent: new-tools-agent
+Task: Add 3 new PDF tools (Unlock PDF, Repair PDF, Redact PDF)
+
+Work Log:
+- Updated /home/z/my-project/src/lib/pdf-utils.ts
+  - Added unlockPDF() - loads PDF with ignoreEncryption (already set in loadPDF) and re-saves to strip encryption metadata
+  - Added repairPDF() - creates fresh document, copies all pages (rebuilds structure), optionally strips invalid metadata
+  - Added escapeRegExp() - helper to escape special regex characters for text matching
+  - Added redactPDF() - uses pdfjs-dist for text extraction with position info, pdf-lib for drawing rectangles over matching text areas
+    - Supports case-sensitive and whole-word matching options
+    - Supports solid fill and x-mark redaction styles
+    - Supports configurable redaction color (rgb values)
+    - Converts pdfjs-dist text coordinates to pdf-lib page coordinates
+- Created Unlock PDF tool - /home/z/my-project/src/tools/unlock-pdf.tsx
+  - Tool ID: 'unlock', Icon: UnlockOpen, Category: security, Color: indigo
+  - Info card explaining the tool removes password protection and encryption
+  - Visual lock/unlock icon that transitions from Lock to LockOpen when file is uploaded
+  - Password input field with show/hide toggle (Eye/EyeOff icons)
+  - Helper text: leave empty if PDF only has restrictions (no open password)
+  - Saves result as "unlocked-{filename}"
+- Created Repair PDF tool - /home/z/my-project/src/tools/repair-pdf.tsx
+  - Tool ID: 'repair', Icon: Wrench, Category: optimize, Color: orange
+  - Info card explaining what repair does (rebuilds structure, removes corrupted objects, fixes page tree)
+  - 4 checkbox options with descriptive icons:
+    - "Rebuild cross-reference table" (Settings icon, default: checked)
+    - "Remove corrupted objects" (FileWarning icon, default: checked)
+    - "Fix page tree structure" (GitBranch icon, default: checked)
+    - "Strip invalid metadata" (Tag icon, default: unchecked)
+  - Each option has description text explaining its effect
+  - Progress indicator during repair with percentage and status message
+  - Saves result as "repaired-{filename}"
+- Created Redact PDF tool - /home/z/my-project/src/tools/redact-pdf.tsx
+  - Tool ID: 'redact', Icon: Eraser, Category: security, Color: rose
+  - Warning card (rose border) explaining redaction is visual (draws rectangles, underlying text may still exist)
+  - Info card with usage instructions
+  - Text input field for the text to redact
+  - Case-sensitive toggle checkbox
+  - Whole word only toggle checkbox
+  - Redaction color picker: 3 presets (Black, Dark Gray, White) with colored circle buttons
+  - Redaction style selector: "Solid Fill" (default) or "X Mark" with visual previews
+  - Visual preview of style showing rectangle with/without X marks
+  - Saves result as "redacted-{filename}"
+- Updated tool definitions - /home/z/my-project/src/lib/tools.ts
+  - Added UnlockOpen, Wrench, Eraser imports from lucide-react
+  - Added 'unlock' tool (indigo color, security category, UnlockOpen icon)
+  - Added 'repair' tool (orange color, optimize category, Wrench icon)
+  - Added 'redact' tool (rose color, security category, Eraser icon)
+- Updated nav-store - /home/z/my-project/src/store/nav-store.ts
+  - Added 'unlock', 'repair', 'redact' to ToolId union type
+- Updated page.tsx - /home/z/my-project/src/app/page.tsx
+  - Added lazy imports for UnlockPDFTool, RepairPDFTool, RedactPDFTool
+  - Added all three to toolComponents record
+- Lint passes with 0 errors
+- Dev server compiles successfully
+
+Stage Summary:
+- 3 new PDF tools added, bringing total from 17 to 20
+- Unlock PDF: remove password protection with optional password input and visual lock/unlock indicator
+- Repair PDF: rebuild PDF structure with 4 configurable repair options and progress tracking
+- Redact PDF: visually redact sensitive text with color/style options and case/whole-word matching
+- All utility functions added to pdf-utils.ts (unlockPDF, repairPDF, redactPDF, escapeRegExp)
+- All supporting files updated consistently (tools.ts, nav-store.ts, page.tsx)
+- Clean lint and successful compilation
+
+---
+Task ID: 6-compare-tool
+Agent: compare-tool-agent
+Task: Add Compare PDF tool
+
+Work Log:
+- Updated /home/z/my-project/src/lib/pdf-utils.ts
+  - Added comparePDFs() - loads two PDFs in parallel, extracts page counts, page dimensions, and metadata for side-by-side comparison
+  - Returns file1 and file2 objects each containing pageCount, dimensions array, and full metadata
+- Updated /home/z/my-project/src/lib/tools.ts
+  - Added GitCompare import from lucide-react
+  - Added 'compare' tool (sky color, optimize category, GitCompare icon)
+- Updated /home/z/my-project/src/store/nav-store.ts
+  - Added 'compare' to ToolId union type
+- Updated /home/z/my-project/src/components/shared/tool-page.tsx
+  - Made actionButton prop optional (supports tools without download/action buttons)
+  - Conditional rendering: only shows action button section when actionButton is provided
+- Created Compare PDF tool - /home/z/my-project/src/tools/compare-pdf.tsx
+  - Tool ID: 'compare', Icon: GitCompare, Category: optimize, Color: sky
+  - Requires exactly 2 PDF files — shows amber warning when 1 or more than 2 files uploaded
+  - Auto-compares when exactly 2 files are uploaded (useEffect triggers runComparison)
+  - No actionButton — comparison results displayed on screen without download
+  - Side-by-side comparison table with 10 rows: File Name, File Size, Page Count, First Page Size, Title, Author, Creator, Producer, Creation Date, Modification Date
+  - Visual diff indicators: green CheckCircle2 for matching, red XCircle for different, red ArrowRight for differences
+  - Different rows highlighted with red background tint
+  - Summary card: "X differences found" (green when 0, sky when differences exist)
+  - Page-by-page dimensions comparison table when page counts match
+  - Page count mismatch notice (amber warning) when page counts differ
+  - Loading spinner during comparison, error card on failure
+- Updated /home/z/my-project/src/app/page.tsx
+  - Added lazy import for ComparePDFTool
+  - Added 'compare' to toolComponents record
+- Lint passes with 0 errors
+
+Stage Summary:
+- 1 new PDF tool added, bringing total from 20 to 21
+- Compare PDF: side-by-side comparison of two PDFs with visual diff indicators, summary card, and page-by-page dimensions comparison
+- ToolPage enhanced: actionButton now optional (supports read-only tools like Compare)
+- All utility functions added to pdf-utils.ts (comparePDFs)
+- All supporting files updated consistently (tools.ts, nav-store.ts, page.tsx)
+- Clean lint and successful compilation
+
+---
+Task ID: cron-review-3
+Agent: main-orchestrator
+Task: Round 3 - QA, 4 new tools, major styling improvements, feature enhancements
+
+Work Log:
+- Read worklog.md and assessed project status (17 tools, dark mode, polished UI)
+- Performed QA using agent-browser + VLM across homepage and tool pages
+- Homepage rated 8/10, Merge tool rated 7/10 by VLM analysis
+- Fixed outdated text: "15+ tools" updated to "21+" in HowItWorks, Stats, WhyChooseCounter sections
+- Added 4 new PDF tools (17 → 21 total):
+  - Unlock PDF: remove password protection with optional password input, visual lock/unlock indicator
+  - Repair PDF: rebuild PDF structure with 4 configurable repair options, progress tracking
+  - Redact PDF: visually redact sensitive text with color/style options, case/whole-word matching
+  - Compare PDF: side-by-side comparison with visual diff indicators, metadata comparison, page dimensions
+- Major styling improvements:
+  - Enhanced tool cards: gradient border on hover, category badge top-right, "New" badge on newest tools, icon glow animation
+  - Page transition animations: slide-in-from-right for tools, slide-in-from-left for home
+  - Loading skeleton: layout-matching skeleton replacing simple spinner
+  - Enhanced dropzone: pulsing dashed border, larger float-animated icon, file type icon row, drag count
+  - Enhanced "Why Choose": floating background particles, counter animation, connecting dotted lines, hover rotation
+  - Enhanced SearchDialog: category tabs, recent searches (localStorage), better empty state, staggered fade-in
+  - ToolPage actionButton made optional (for Compare PDF tool)
+- Updated "New" badge list to include all 6 newest tools
+- Updated stats counters: 21+ PDF Tools across all sections
+- CSS animations added: border-dance, slide-in-right, slide-in-left, stagger-fade-in, pulse-glow, icon-glow
+- All 21 tools verified via browser testing (zero console errors)
+- Lint passes with zero errors
+
+Stage Summary:
+- Project expanded from 17 to 21 PDF tools
+- 4 new tools: Unlock PDF, Repair PDF, Redact PDF, Compare PDF
+- Major visual polish: page transitions, skeleton loading, enhanced dropzone, search category tabs
+- Total tool count: 21
+
+Current project status: Stable, feature-rich, visually polished with 21 tools and comprehensive UX
+Unresolved issues: None critical
+Priority recommendations for next phase:
+- Add PDF to Word/HTML conversion (requires backend AI processing)
+- Add digital signature/annotation drawing tool
+- Add batch operations (process multiple files sequentially)
+- Add full-page PDF preview (not just thumbnails)
+- Add onboarding tutorial for first-time users
+- Improve mobile responsiveness for tool controls

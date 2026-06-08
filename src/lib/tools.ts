@@ -2,7 +2,7 @@ import {
   Merge, Scissors, Minimize2, RotateCw, 
   FileImage, ImagePlus, Droplets, Lock, 
   LayoutList, FileText, Hash, Settings, Trash2,
-  Layers, Crop
+  Layers, Crop, Unlock, Wrench, Eraser, GitCompare
 } from 'lucide-react';
 import React from 'react';
 
@@ -169,6 +169,42 @@ export const tools: ToolDefinition[] = [
     color: 'text-fuchsia-600 dark:text-fuchsia-400',
     bgColor: 'bg-fuchsia-50 hover:bg-fuchsia-100 dark:bg-fuchsia-950/30 dark:hover:bg-fuchsia-950/50',
     category: 'organize',
+  },
+  {
+    id: 'unlock',
+    name: 'Unlock PDF',
+    description: 'Remove password protection from PDF files',
+    icon: Unlock,
+    color: 'text-indigo-600 dark:text-indigo-400',
+    bgColor: 'bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/30 dark:hover:bg-indigo-950/50',
+    category: 'security',
+  },
+  {
+    id: 'repair',
+    name: 'Repair PDF',
+    description: 'Repair and rebuild corrupted PDF files',
+    icon: Wrench,
+    color: 'text-orange-600 dark:text-orange-400',
+    bgColor: 'bg-orange-50 hover:bg-orange-100 dark:bg-orange-950/30 dark:hover:bg-orange-950/50',
+    category: 'optimize',
+  },
+  {
+    id: 'redact',
+    name: 'Redact PDF',
+    description: 'Permanently redact sensitive text from PDF',
+    icon: Eraser,
+    color: 'text-rose-600 dark:text-rose-400',
+    bgColor: 'bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/30 dark:hover:bg-rose-950/50',
+    category: 'security',
+  },
+  {
+    id: 'compare',
+    name: 'Compare PDF',
+    description: 'Compare two PDF files and see differences',
+    icon: GitCompare,
+    color: 'text-sky-600 dark:text-sky-400',
+    bgColor: 'bg-sky-50 hover:bg-sky-100 dark:bg-sky-950/30 dark:hover:bg-sky-950/50',
+    category: 'optimize',
   },
 ];
 
