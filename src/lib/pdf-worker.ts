@@ -21,14 +21,16 @@ export function getPdfjs(): Promise<typeof PdfjsLib> {
   pdfjsPromise = import('pdfjs-dist').then((pdfjs) => {
     // Only set up the worker once.
     // Using the fake-worker (empty string) forces pdfjs to run synchronously on
-    // the main thread which freezes the UI on large files.  Point it at the CDN
-    // build that matches the installed package version instead.
+    // the main thread which freezes the UI on large files.  Resolve the worker
+    // from the locally installed package instead of a CDN — the bundler
+    // (Turbopack/webpack) rewrites this `new URL(..., import.meta.url)` to a
+    // same-origin asset, so there's no network dependency and the worker build
+    // always matches the installed pdfjs-dist version.
     if (!pdfjs.GlobalWorkerOptions.workerSrc) {
-      // pdfjs-dist v4+ ships an ES-module worker.  We use the legacy UMD build
-      // from unpkg/cdnjs because Next.js' webpack config can interfere with
-      // the mjs worker entry.  The version is read from the library itself.
-      const version = pdfjs.version ?? '4.9.155';
-      pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${version}/pdf.worker.min.mjs`;
+      pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+        'pdfjs-dist/build/pdf.worker.min.mjs',
+        import.meta.url
+      ).toString();
     }
     return pdfjs;
   });
