@@ -8,6 +8,31 @@ import { FileImage } from 'lucide-react';
 import JSZip from 'jszip';
 import { getPdfjs } from '@/lib/pdf-worker';
 
+const BLOB_TIMEOUT = 60_000;
+
+function canvasToBlob(
+  canvas: HTMLCanvasElement,
+  type: string,
+  quality?: number,
+): Promise<Blob> {
+  return new Promise<Blob>((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error('Canvas rendering timed out')),
+      BLOB_TIMEOUT,
+    );
+    canvas.toBlob((b) => {
+      clearTimeout(timer);
+      if (b) resolve(b);
+      else reject(new Error('Canvas toBlob returned null — likely out of memory'));
+    }, type, quality);
+  });
+}
+
+function freeCanvas(canvas: HTMLCanvasElement) {
+  canvas.width = 0;
+  canvas.height = 0;
+}
+
 export function PDFToJPGTool() {
   const { files, setProcessing, setProgress, setSuccess, setError } = useFileStore();
 
@@ -20,35 +45,53 @@ export function PDFToJPGTool() {
 
       const pdf = await pdfjsLib.getDocument({ data: files[0].data }).promise;
       const numPages = pdf.numPages;
-      const images: Blob[] = [];
 
-      for (let i = 1; i <= numPages; i++) {
-        setProgress(Math.round((i / numPages) * 80), `Converting page ${i} of ${numPages}...`);
-        const page = await pdf.getPage(i);
-        const viewport = page.getViewport({ scale: 2.0 });
+      const SCALE = 2.0;
+
+      if (numPages === 1) {
+        const page = await pdf.getPage(1);
+        const viewport = page.getViewport({ scale: SCALE });
         const canvas = document.createElement('canvas');
         canvas.width = viewport.width;
         canvas.height = viewport.height;
-        const ctx = canvas.getContext('2d')!;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error('Could not get 2D rendering context');
 
-        await page.render({ canvasContext: ctx, viewport }).promise;
+        await page.render({ canvasContext: ctx, viewport, canvas }).promise;
 
-        const blob = await new Promise<Blob>((resolve) => {
-          canvas.toBlob((b) => resolve(b!), 'image/jpeg', 0.92);
-        });
-        images.push(blob);
-      }
+        const blob = await canvasToBlob(canvas, 'image/jpeg', 0.92);
+        freeCanvas(canvas);
 
-      setProgress(85, 'Packaging images...');
-
-      if (images.length === 1) {
-        setSuccess({ blob: images[0], filename: 'page-1.jpg', size: images[0].size });
+        setProgress(100, 'Done!');
+        setSuccess({ blob, filename: 'page-1.jpg', size: blob.size });
       } else {
         const zip = new JSZip();
-        images.forEach((img, i) => {
-          zip.file(`page-${i + 1}.jpg`, img);
-        });
+
+        for (let i = 1; i <= numPages; i++) {
+          setProgress(
+            Math.round((i / numPages) * 85),
+            `Converting page ${i} of ${numPages}...`,
+          );
+
+          const page = await pdf.getPage(i);
+          const viewport = page.getViewport({ scale: SCALE });
+          const canvas = document.createElement('canvas');
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) throw new Error('Could not get 2D rendering context');
+
+          await page.render({ canvasContext: ctx, viewport, canvas }).promise;
+
+          const blob = await canvasToBlob(canvas, 'image/jpeg', 0.92);
+          freeCanvas(canvas);
+
+          zip.file(`page-${i + 1}.jpg`, blob);
+        }
+
+        setProgress(90, 'Packaging images...');
         const zipBlob = await zip.generateAsync({ type: 'blob' });
+        setProgress(100, 'Done!');
         setSuccess({ blob: zipBlob, filename: 'pdf-images.zip', size: zipBlob.size });
       }
     } catch (err) {

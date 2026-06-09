@@ -60,42 +60,78 @@ export function PDFToPNGTool() {
 
       const pdf = await pdfjsLib.getDocument({ data: files[0].data }).promise;
       const numPages = pdf.numPages;
-      const images: Blob[] = [];
+      const scale = selectedQuality.scale;
 
-      for (let i = 1; i <= numPages; i++) {
-        setProgress(
-          Math.round((i / numPages) * 80),
-          `Converting page ${i} of ${numPages}...`
-        );
-        const page = await pdf.getPage(i);
-        const viewport = page.getViewport({ scale: selectedQuality.scale });
+      if (numPages === 1) {
+        const page = await pdf.getPage(1);
+        const viewport = page.getViewport({ scale });
         const canvas = document.createElement('canvas');
         canvas.width = viewport.width;
         canvas.height = viewport.height;
-        const ctx = canvas.getContext('2d')!;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error('Could not get 2D rendering context');
 
-        await page.render({ canvasContext: ctx, viewport }).promise;
+        await page.render({ canvasContext: ctx, viewport, canvas }).promise;
 
-        const blob = await new Promise<Blob>((resolve) => {
-          canvas.toBlob((b) => resolve(b!), 'image/png');
+        const blob = await new Promise<Blob>((resolve, reject) => {
+          const timer = setTimeout(
+            () => reject(new Error('Canvas rendering timed out')),
+            60_000,
+          );
+          canvas.toBlob((b) => {
+            clearTimeout(timer);
+            if (b) resolve(b);
+            else reject(new Error('Canvas toBlob returned null — likely out of memory'));
+          }, 'image/png');
         });
-        images.push(blob);
-      }
+        canvas.width = 0;
+        canvas.height = 0;
 
-      setProgress(85, 'Packaging images...');
-
-      if (images.length === 1) {
+        setProgress(100, 'Done!');
         setSuccess({
-          blob: images[0],
+          blob,
           filename: 'page-1.png',
-          size: images[0].size,
+          size: blob.size,
         });
       } else {
         const zip = new JSZip();
-        images.forEach((img, i) => {
-          zip.file(`page-${i + 1}.png`, img);
-        });
+
+        for (let i = 1; i <= numPages; i++) {
+          setProgress(
+            Math.round((i / numPages) * 85),
+            `Converting page ${i} of ${numPages}...`,
+          );
+
+          const page = await pdf.getPage(i);
+          const viewport = page.getViewport({ scale });
+          const canvas = document.createElement('canvas');
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) throw new Error('Could not get 2D rendering context');
+
+          await page.render({ canvasContext: ctx, viewport, canvas }).promise;
+
+          const blob = await new Promise<Blob>((resolve, reject) => {
+            const timer = setTimeout(
+              () => reject(new Error('Canvas rendering timed out')),
+              60_000,
+            );
+            canvas.toBlob((b) => {
+              clearTimeout(timer);
+              if (b) resolve(b);
+              else reject(new Error('Canvas toBlob returned null — likely out of memory'));
+            }, 'image/png');
+          });
+          canvas.width = 0;
+          canvas.height = 0;
+
+          zip.file(`page-${i + 1}.png`, blob);
+        }
+
+        setProgress(90, 'Packaging images...');
         const zipBlob = await zip.generateAsync({ type: 'blob' });
+        setProgress(100, 'Done!');
         setSuccess({
           blob: zipBlob,
           filename: 'pdf-images.zip',
