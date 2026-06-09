@@ -21,16 +21,12 @@ export function getPdfjs(): Promise<typeof PdfjsLib> {
   pdfjsPromise = import('pdfjs-dist').then((pdfjs) => {
     // Only set up the worker once.
     // Using the fake-worker (empty string) forces pdfjs to run synchronously on
-    // the main thread which freezes the UI on large files.  Resolve the worker
-    // from the locally installed package instead of a CDN — the bundler
-    // (Turbopack/webpack) rewrites this `new URL(..., import.meta.url)` to a
-    // same-origin asset, so there's no network dependency and the worker build
-    // always matches the installed pdfjs-dist version.
+    // the main thread which freezes the UI on large files.  We serve the worker
+    // as a static same-origin asset from `public/pdf.worker.min.mjs` (copied
+    // from node_modules/pdfjs-dist/build at the matching version). This avoids
+    // both the unreliable CDN fetch and any bundler module-resolution quirks.
     if (!pdfjs.GlobalWorkerOptions.workerSrc) {
-      pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-        'pdfjs-dist/build/pdf.worker.min.mjs',
-        import.meta.url
-      ).toString();
+      pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
     }
     return pdfjs;
   });
