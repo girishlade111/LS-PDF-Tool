@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { FileText, Copy, Download, Check, Type } from 'lucide-react';
 import { getPdfjs } from '@/lib/pdf-worker';
-import type { TextItem } from 'pdfjs-dist';
+import type { TextItem } from 'pdfjs-dist/types/src/display/api';
 
 export function PDFToTextTool() {
   const { files, setProcessing, setProgress, setSuccess, setError, resetProcessing } = useFileStore();
