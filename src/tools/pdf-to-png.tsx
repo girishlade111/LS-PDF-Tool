@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { FileImage, Zap, Eye, Sparkles } from 'lucide-react';
 import JSZip from 'jszip';
+import { getPdfjs } from '@/lib/pdf-worker';
 
 type QualityLevel = 'standard' | 'high' | 'ultra';
 
@@ -55,9 +56,7 @@ export function PDFToPNGTool() {
 
       const selectedQuality = qualityOptions.find((q) => q.id === quality)!;
 
-      // Dynamic import of pdfjs-dist to avoid SSR issues
-      const pdfjsLib = await import('pdfjs-dist');
-      pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+      const pdfjsLib = await getPdfjs();
 
       const pdf = await pdfjsLib.getDocument({ data: files[0].data }).promise;
       const numPages = pdf.numPages;
