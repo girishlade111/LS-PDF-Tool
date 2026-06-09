@@ -86,7 +86,7 @@ export function PDFToJPGTool() {
           const blob = await canvasToBlob(canvas, 'image/jpeg', 0.92);
           freeCanvas(canvas);
 
-          zip.file(`page-${i + 1}.jpg`, blob);
+          zip.file(`page-${i}.jpg`, blob);
         }
 
         setProgress(90, 'Packaging images...');

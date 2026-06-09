@@ -45,6 +45,37 @@ const qualityOptions: {
   },
 ];
 
+const MAX_CANVAS_DIM = 8192;
+
+function canvasToBlobWithTimeout(
+  canvas: HTMLCanvasElement,
+  type: string,
+  timeoutMs = 60_000,
+): Promise<Blob> {
+  return new Promise<Blob>((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error('Canvas rendering timed out')),
+      timeoutMs,
+    );
+    canvas.toBlob((b) => {
+      clearTimeout(timer);
+      if (b) resolve(b);
+      else reject(new Error('Canvas toBlob returned null — likely out of memory'));
+    }, type);
+  });
+}
+
+function checkCanvasDimensions(width: number, height: number): void {
+  if (width <= 0 || height <= 0) {
+    throw new Error(`Invalid canvas dimensions: ${width}x${height}`);
+  }
+  if (width > MAX_CANVAS_DIM || height > MAX_CANVAS_DIM) {
+    throw new Error(
+      `Page too large for rendering at this quality level (${Math.round(width)}x${Math.round(height)} exceeds ${MAX_CANVAS_DIM}px limit). Try a lower quality setting.`,
+    );
+  }
+}
+
 export function PDFToPNGTool() {
   const { files, setProcessing, setProgress, setSuccess, setError } = useFileStore();
   const [quality, setQuality] = useState<QualityLevel>('high');
@@ -65,6 +96,7 @@ export function PDFToPNGTool() {
       if (numPages === 1) {
         const page = await pdf.getPage(1);
         const viewport = page.getViewport({ scale });
+        checkCanvasDimensions(viewport.width, viewport.height);
         const canvas = document.createElement('canvas');
         canvas.width = viewport.width;
         canvas.height = viewport.height;
@@ -73,17 +105,7 @@ export function PDFToPNGTool() {
 
         await page.render({ canvasContext: ctx, viewport, canvas }).promise;
 
-        const blob = await new Promise<Blob>((resolve, reject) => {
-          const timer = setTimeout(
-            () => reject(new Error('Canvas rendering timed out')),
-            60_000,
-          );
-          canvas.toBlob((b) => {
-            clearTimeout(timer);
-            if (b) resolve(b);
-            else reject(new Error('Canvas toBlob returned null — likely out of memory'));
-          }, 'image/png');
-        });
+        const blob = await canvasToBlobWithTimeout(canvas, 'image/png');
         canvas.width = 0;
         canvas.height = 0;
 
@@ -104,6 +126,7 @@ export function PDFToPNGTool() {
 
           const page = await pdf.getPage(i);
           const viewport = page.getViewport({ scale });
+          checkCanvasDimensions(viewport.width, viewport.height);
           const canvas = document.createElement('canvas');
           canvas.width = viewport.width;
           canvas.height = viewport.height;
@@ -112,21 +135,11 @@ export function PDFToPNGTool() {
 
           await page.render({ canvasContext: ctx, viewport, canvas }).promise;
 
-          const blob = await new Promise<Blob>((resolve, reject) => {
-            const timer = setTimeout(
-              () => reject(new Error('Canvas rendering timed out')),
-              60_000,
-            );
-            canvas.toBlob((b) => {
-              clearTimeout(timer);
-              if (b) resolve(b);
-              else reject(new Error('Canvas toBlob returned null — likely out of memory'));
-            }, 'image/png');
-          });
+          const blob = await canvasToBlobWithTimeout(canvas, 'image/png');
           canvas.width = 0;
           canvas.height = 0;
 
-          zip.file(`page-${i + 1}.png`, blob);
+          zip.file(`page-${i}.png`, blob);
         }
 
         setProgress(90, 'Packaging images...');
