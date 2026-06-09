@@ -6,6 +6,7 @@ import { useFileStore } from '@/store/file-store';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { FileText, Copy, Download, Check, Type } from 'lucide-react';
+import { getPdfjs } from '@/lib/pdf-worker';
 
 export function PDFToTextTool() {
   const { files, setProcessing, setProgress, setSuccess, setError } = useFileStore();
@@ -21,8 +22,7 @@ export function PDFToTextTool() {
     try {
       setProcessing('Extracting text...');
 
-      const pdfjsLib = await import('pdfjs-dist');
-      pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+      const pdfjsLib = await getPdfjs();
 
       const pdf = await pdfjsLib.getDocument({ data: files[0].data }).promise;
       const numPages = pdf.numPages;
