@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { FileText, Copy, Download, Check, Type } from 'lucide-react';
 import { getPdfjs } from '@/lib/pdf-worker';
+import type { TextItem } from 'pdfjs-dist';
 
 export function PDFToTextTool() {
   const { files, setProcessing, setProgress, setSuccess, setError, resetProcessing } = useFileStore();
@@ -35,7 +36,7 @@ export function PDFToTextTool() {
         const page = await pdf.getPage(i);
         const textContent = await page.getTextContent();
         const pageText = textContent.items
-          .filter((item): item is { str: string } => 'str' in item)
+          .filter((item): item is TextItem => 'str' in item)
           .map((item) => item.str)
           .join(' ');
         pageTexts.push(`--- Page ${i} ---\n${pageText}\n\n`);
