@@ -9,7 +9,7 @@ import { FileText, Copy, Download, Check, Type } from 'lucide-react';
 import { getPdfjs } from '@/lib/pdf-worker';
 
 export function PDFToTextTool() {
-  const { files, setProcessing, setProgress, setSuccess, setError } = useFileStore();
+  const { files, setProcessing, setProgress, setSuccess, setError, resetProcessing } = useFileStore();
   const [extractedText, setExtractedText] = useState('');
   const [isExtracted, setIsExtracted] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -21,23 +21,27 @@ export function PDFToTextTool() {
     if (files.length === 0) return;
     try {
       setProcessing('Extracting text...');
+      setExtractedText('');
+      setIsExtracted(false);
 
       const pdfjsLib = await getPdfjs();
 
       const pdf = await pdfjsLib.getDocument({ data: files[0].data }).promise;
       const numPages = pdf.numPages;
-      let fullText = '';
+      const pageTexts: string[] = [];
 
       for (let i = 1; i <= numPages; i++) {
         setProgress(Math.round((i / numPages) * 80), `Extracting page ${i} of ${numPages}...`);
         const page = await pdf.getPage(i);
         const textContent = await page.getTextContent();
         const pageText = textContent.items
-          .map((item: any) => item.str)
+          .filter((item): item is { str: string } => 'str' in item)
+          .map((item) => item.str)
           .join(' ');
-        fullText += `--- Page ${i} ---\n${pageText}\n\n`;
+        pageTexts.push(`--- Page ${i} ---\n${pageText}\n\n`);
       }
 
+      const fullText = pageTexts.join('');
       setExtractedText(fullText);
       setIsExtracted(true);
 
@@ -58,26 +62,33 @@ export function PDFToTextTool() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Fallback for older browsers
-      const textarea = document.createElement('textarea');
-      textarea.value = extractedText;
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textarea);
+      try {
+        const textarea = document.createElement('textarea');
+        textarea.value = extractedText;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      } catch {
+        // Clipboard unavailable — silently ignore
+      }
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
   };
 
   const handleDownloadTxt = () => {
-    const blob = new Blob([extractedText], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = files.length > 0 ? `${files[0].name.replace('.pdf', '')}.txt` : 'extracted-text.txt';
-    a.click();
-    URL.revokeObjectURL(url);
+    try {
+      const blob = new Blob([extractedText], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = files.length > 0 && files[0] ? `${files[0].name.replace('.pdf', '')}.txt` : 'extracted-text.txt';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to download text');
+    }
   };
 
   return (
@@ -92,7 +103,7 @@ export function PDFToTextTool() {
         </Button>
       }
     >
-      {isExtracted && extractedText ? (
+      {isExtracted ? (
         <div className="space-y-3">
           {/* Stats bar */}
           <div className="flex items-center gap-4 rounded-lg border bg-muted/30 px-4 py-2">
