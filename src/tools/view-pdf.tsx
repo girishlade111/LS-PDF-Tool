@@ -30,6 +30,7 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from '@/components/ui/tooltip';
+import { getPdfjs } from '@/lib/pdf-worker';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
