@@ -56,8 +56,7 @@ export function FileList() {
     let cancelled = false;
 
     async function renderThumbnails() {
-      const pdfjsLib = await import('pdfjs-dist');
-      pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+      const pdfjsLib = await getPdfjs();
 
       const newThumbnails: Record<string, string> = {};
 

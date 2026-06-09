@@ -54,8 +54,7 @@ export function RearrangePDFTool() {
 
     async function renderThumbnails() {
       try {
-        const pdfjsLib = await import('pdfjs-dist');
-        pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+        const pdfjsLib = await getPdfjs();
 
         const pdfDoc = await pdfjsLib.getDocument({ data: new Uint8Array(files[0].data) }).promise;
         const rendered: PageThumbnail[] = [];

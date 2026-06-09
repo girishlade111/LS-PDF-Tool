@@ -83,8 +83,7 @@ function PDFViewer({
 
     const loadPdf = async () => {
       try {
-        const pdfjsLib = await import('pdfjs-dist');
-        pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+        const pdfjsLib = await getPdfjs();
 
         const pdf = await pdfjsLib.getDocument({ data: fileData }).promise;
         if (cancelled) return;

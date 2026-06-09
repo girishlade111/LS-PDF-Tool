@@ -26,8 +26,7 @@ export function PDFThumbnails({
 
     async function renderThumbnails() {
       try {
-        const pdfjsLib = await import('pdfjs-dist');
-        pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+        const pdfjsLib = await getPdfjs();
 
         const pdf = await pdfjsLib.getDocument({ data: file.data }).promise;
         const numPages = pdf.numPages;
