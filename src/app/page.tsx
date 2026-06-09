@@ -1007,7 +1007,7 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
 
 function KeyboardShortcuts() {
   const { goHome } = useNavStore();
-  const { setSearchOpen } = React.useContext(CategoryFilterContext);
+  const { searchOpen, setSearchOpen } = React.useContext(CategoryFilterContext);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
