@@ -818,39 +818,26 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
     return result;
   })();
 
-  // Reset state when dialog opens (derived from open prop change)
-  if (open && !prevOpen) {
-    setPrevOpen(true);
-    setQuery('');
-    setSelectedIndex(0);
-    setSearchCategory(null);
-  }
-  if (!open && prevOpen) {
-    setPrevOpen(false);
-  }
-
-  // Focus input when dialog opens
+  // Reset state and load recent searches when dialog opens
   useEffect(() => {
     if (open) {
+      setQuery('');
+      setSelectedIndex(0);
+      setSearchCategory(null);
+      // Load recent searches
+      try {
+        const stored = localStorage.getItem('pdf-tools-recent-searches');
+        if (stored) {
+          setRecentSearches(JSON.parse(stored).slice(0, 5));
+        }
+      } catch {
+        // ignore
+      }
+      // Focus input
       const timer = setTimeout(() => inputRef.current?.focus(), 100);
       return () => clearTimeout(timer);
     }
   }, [open]);
-
-  // Load recent searches when dialog opens (derived state, not in effect)
-  if (open && !prevOpen) {
-    try {
-      const stored = localStorage.getItem('pdf-tools-recent-searches');
-      if (stored) {
-        const parsed = JSON.parse(stored).slice(0, 5);
-        if (JSON.stringify(parsed) !== JSON.stringify(recentSearches)) {
-          setRecentSearches(parsed);
-        }
-      }
-    } catch {
-      // ignore
-    }
-  }
 
   // Derive selectedIndex reset from query change
   const effectiveSelectedIndex = Math.min(selectedIndex, Math.max(filteredTools.length - 1, 0));
@@ -1024,17 +1011,25 @@ function KeyboardShortcuts() {
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      // Escape → go home or close search
-      if (e.key === 'Escape') {
-        goHome();
-      }
       // Ctrl/Cmd+K → open search
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
         setSearchOpen(true);
+        return;
+      }
+      // Escape → close search first, then go home
+      if (e.key === 'Escape') {
+        // Don't navigate home if search is open — the search dialog
+        // handles its own Escape via the backdrop click / onClose prop.
+        // Only go home when search is already closed.
+        if (!searchOpen) {
+          goHome();
+        } else {
+          setSearchOpen(false);
+        }
       }
     },
-    [goHome, setSearchOpen]
+    [goHome, setSearchOpen, searchOpen]
   );
 
   useEffect(() => {
@@ -1260,11 +1255,11 @@ function ToolsGrid() {
                 const isAITool = ['pdf-to-markdown', 'ocr-pdf', 'summarize-pdf', 'pdf-to-docx'].includes(tool.id);
                 const categoryLabel = categories.find((c) => c.id === tool.category)?.name || tool.category;
                 return (
-                  <a
+                  <button
                     key={tool.id}
-                    href={`#${tool.id}`}
+                    onClick={() => navigate(tool.id as Parameters<typeof navigate>[0])}
                     aria-label={`${tool.name} — ${tool.description}`}
-                    className="block no-underline rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                    className="block w-full text-left no-underline rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   >
                     <Card className="group cursor-pointer transition-all duration-300 hover:shadow-lg hover:-translate-y-1 hover:shadow-primary/5 border-border/60 relative overflow-hidden before:absolute before:inset-0 before:rounded-lg before:p-[1px] before:bg-gradient-to-br before:from-red-500/0 before:via-orange-500/0 before:to-amber-500/0 hover:before:from-red-500/30 hover:before:via-orange-500/20 hover:before:to-amber-500/30 before:transition-all before:duration-500 before:-z-10 before:pointer-events-none shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)] active:scale-[0.98] h-full">
                       {/* Colored left border */}
@@ -1323,7 +1318,7 @@ function ToolsGrid() {
                         </div>
                       </CardContent>
                     </Card>
-                  </a>
+                  </button>
                 );
               })}
             </div>
