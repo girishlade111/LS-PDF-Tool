@@ -17,21 +17,11 @@ import {
   Zap,
   Gem,
   Type,
-  Languages,
+  Info,
 } from 'lucide-react';
+import { getPdfjs } from '@/lib/pdf-worker';
 
 type Quality = 'standard' | 'high';
-type Language = 'auto' | 'en' | 'es' | 'fr' | 'de' | 'zh' | 'ja';
-
-const languageOptions: { value: Language; label: string }[] = [
-  { value: 'auto', label: 'Auto-detect' },
-  { value: 'en', label: 'English' },
-  { value: 'es', label: 'Spanish' },
-  { value: 'fr', label: 'French' },
-  { value: 'de', label: 'German' },
-  { value: 'zh', label: 'Chinese' },
-  { value: 'ja', label: 'Japanese' },
-];
 
 function parsePageRange(input: string, totalPages: number): number[] {
   if (!input.trim() || input.trim().toLowerCase() === 'all') {
@@ -66,7 +56,6 @@ export function OCRPDFTool() {
   const { files, setProcessing, setProgress, setError, resetProcessing } =
     useFileStore();
   const [quality, setQuality] = useState<Quality>('standard');
-  const [language, setLanguage] = useState<Language>('auto');
   const [pageRange, setPageRange] = useState('all');
   const [pageResults, setPageResults] = useState<
     { pageNumber: number; text: string }[]
@@ -90,11 +79,9 @@ export function OCRPDFTool() {
       setProgressValue(0);
       setProgressMessage('Loading PDF...');
       setPageResults([]);
-      setProcessing('Running OCR on PDF...');
+      setProcessing('Extracting text from PDF...');
 
-      // Dynamic import of pdfjs-dist
-      const pdfjsLib = await import('pdfjs-dist');
-      pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+      const pdfjsLib = await getPdfjs();
 
       const pdf = await pdfjsLib.getDocument({ data: files[0].data }).promise;
       const totalPages = pdf.numPages;
@@ -106,88 +93,64 @@ export function OCRPDFTool() {
         return;
       }
 
-      const scale = quality === 'high' ? 2 : 1;
-      const images: string[] = [];
-      const pageNums: number[] = [];
-
-      // Render pages as images
-      for (let idx = 0; idx < targetPages.length; idx++) {
-        const pageNum = targetPages[idx];
-        const progressPct = Math.round(((idx + 1) / targetPages.length) * 40);
-        setProgressValue(progressPct);
-        setProgressMessage(
-          `Rendering page ${pageNum} of ${targetPages.length}...`
-        );
-        setProgress(progressPct, `Rendering page ${pageNum}...`);
-
-        const page = await pdf.getPage(pageNum);
-        const viewport = page.getViewport({ scale });
-        const canvas = document.createElement('canvas');
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        const ctx = canvas.getContext('2d')!;
-
-        await page.render({ canvasContext: ctx, viewport }).promise;
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-        images.push(dataUrl);
-        pageNums.push(pageNum);
-      }
-
-      // Send to API for AI OCR processing (one page at a time)
       const results: { pageNumber: number; text: string }[] = [];
 
-      for (let idx = 0; idx < images.length; idx++) {
-        const baseProgress = 40;
-        const progressPct =
-          baseProgress +
-          Math.round(((idx + 1) / images.length) * 55);
+      // Extract text from each page using pdfjs-dist (client-side)
+      for (let idx = 0; idx < targetPages.length; idx++) {
+        const pageNum = targetPages[idx];
+        const progressPct = Math.round(((idx + 1) / targetPages.length) * 90);
         setProgressValue(progressPct);
         setProgressMessage(
-          `AI processing page ${pageNums[idx]} (${idx + 1}/${images.length})...`
+          `Extracting text from page ${pageNum} (${idx + 1}/${targetPages.length})...`
         );
-        setProgress(progressPct, `AI processing page ${pageNums[idx]}...`);
+        setProgress(progressPct, `Extracting page ${pageNum}...`);
 
         try {
-          const response = await fetch('/api/ocr-pdf', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              images: [images[idx]],
-              pageNumbers: [pageNums[idx]],
-              language:
-                language === 'auto'
-                  ? 'auto'
-                  : languageOptions.find((l) => l.value === language)?.label ||
-                    language,
-            }),
+          const page = await pdf.getPage(pageNum);
+          const textContent = await page.getTextContent();
+
+          // Group text items into lines based on Y position
+          const items = textContent.items
+            .filter((item): item is { str: string; transform: number[]; width: number; height: number } => 'str' in item);
+
+          // Build text preserving some layout
+          let pageText = '';
+          let lastY: number | null = null;
+
+          for (const item of items) {
+            const y = Math.round(item.transform[5]);
+            if (lastY !== null && Math.abs(y - lastY) > 5) {
+              pageText += '\n';
+            } else if (lastY !== null && pageText.length > 0 && !pageText.endsWith('\n')) {
+              pageText += ' ';
+            }
+            pageText += item.str;
+            lastY = y;
+          }
+
+          results.push({
+            pageNumber: pageNum,
+            text: pageText.trim() || '[No text content found on this page]',
           });
-
-          if (!response.ok) {
-            const errData = await response.json().catch(() => ({}));
-            throw new Error(
-              errData.error || `API error: ${response.status}`
-            );
-          }
-
-          const data = await response.json();
-          if (data.pages && data.pages.length > 0) {
-            results.push(data.pages[0]);
-          }
         } catch (pageErr) {
           results.push({
-            pageNumber: pageNums[idx],
-            text: `[Error processing page ${pageNums[idx]}: ${pageErr instanceof Error ? pageErr.message : 'Unknown error'}]`,
+            pageNumber: pageNum,
+            text: `[Error extracting text from page ${pageNum}: ${pageErr instanceof Error ? pageErr.message : 'Unknown error'}]`,
           });
         }
       }
 
       setPageResults(results);
       setProgressValue(100);
-      setProgressMessage('OCR complete!');
-      setProgress(100, 'OCR complete!');
+      setProgressMessage('Text extraction complete!');
+      setProgress(100, 'Text extraction complete!');
 
-      // Create a downloadable blob
-      const textBlob = new Blob([allText], { type: 'text/plain' });
+      // Build the final text from results (NOT from stale allText)
+      const finalText = results
+        .map((p) => `--- Page ${p.pageNumber} ---\n${p.text}`)
+        .join('\n\n');
+
+      const textBlob = new Blob([finalText], { type: 'text/plain' });
       const { setSuccess } = useFileStore.getState();
       setSuccess({
         blob: textBlob,
@@ -196,7 +159,7 @@ export function OCRPDFTool() {
       });
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : 'Failed to perform OCR on PDF'
+        err instanceof Error ? err.message : 'Failed to extract text from PDF'
       );
     } finally {
       setIsProcessing(false);
@@ -258,14 +221,14 @@ export function OCRPDFTool() {
         </Button>
       }
     >
-      {/* AI-Powered Badge */}
+      {/* Info badge */}
       <div className="flex items-center gap-2">
         <Badge
           variant="secondary"
           className="bg-gradient-to-r from-violet-50 to-purple-50 dark:from-violet-950/30 dark:to-purple-950/30 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-800"
         >
           <Sparkles className="h-3 w-3 mr-1" />
-          AI-Powered
+          Client-Side Text Extraction
         </Badge>
       </div>
 
@@ -309,7 +272,7 @@ export function OCRPDFTool() {
             </Button>
             <div className="flex-1" />
             <Button variant="ghost" size="sm" onClick={handleReset}>
-              OCR Another
+              Extract Another
             </Button>
           </div>
 
@@ -328,41 +291,27 @@ export function OCRPDFTool() {
             <div className="flex items-start gap-3">
               <Sparkles className="h-5 w-5 text-violet-500 dark:text-violet-400 shrink-0 mt-0.5" />
               <div className="space-y-1">
-                <p className="text-sm font-medium">AI-Powered OCR</p>
+                <p className="text-sm font-medium">Text Extraction (OCR)</p>
                 <p className="text-sm text-muted-foreground">
-                  Upload a scanned PDF and our AI will extract text from each
-                  page, preserving layout and formatting as much as possible.
+                  Upload a PDF and extract all embedded text content from each
+                  page. Works entirely in your browser — no data is sent to any
+                  server.
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Language selector */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium flex items-center gap-1.5">
-              <Languages className="h-3.5 w-3.5" />
-              Document Language
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {languageOptions.map((lang) => (
-                <button
-                  key={lang.value}
-                  onClick={() => setLanguage(lang.value)}
-                  className={`px-3 py-1.5 rounded-md text-sm transition-all ${
-                    language === lang.value
-                      ? 'bg-violet-100 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300 border border-violet-300 dark:border-violet-700'
-                      : 'bg-muted/50 text-muted-foreground border border-transparent hover:bg-muted hover:text-foreground'
-                  }`}
-                >
-                  {lang.label}
-                </button>
-              ))}
-            </div>
+          {/* Note about scanned PDFs */}
+          <div className="flex items-start gap-2 rounded-lg border border-amber-200 dark:border-amber-800/50 bg-amber-50/50 dark:bg-amber-950/20 p-3">
+            <Info className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <p className="text-xs text-amber-700 dark:text-amber-300">
+              This tool extracts embedded text from PDFs. For scanned documents (image-only PDFs), text may not be available as the content is stored as images.
+            </p>
           </div>
 
           {/* Quality selector */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Rendering Quality</label>
+            <label className="text-sm font-medium">Extraction Quality</label>
             <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={() => setQuality('standard')}
@@ -379,7 +328,7 @@ export function OCRPDFTool() {
                   <span className="text-sm font-medium">Standard</span>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  1x scale — Faster processing
+                  Fast text extraction
                 </p>
               </button>
               <button
@@ -397,7 +346,7 @@ export function OCRPDFTool() {
                   <span className="text-sm font-medium">High</span>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  2x scale — Better quality
+                  Better layout preservation
                 </p>
               </button>
             </div>
