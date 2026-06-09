@@ -6,9 +6,13 @@
  *
  * This module:
  *  1. Lazily imports pdfjs-dist (keeps it out of the initial bundle).
- *  2. Configures the Web Worker *once* using the matching CDN build so that PDF
- *     parsing runs off the main thread.
+ *  2. Configures the Web Worker *once* from a static same-origin asset
+ *     (`public/pdf.worker.min.mjs`) so PDF parsing runs off the main thread.
  *  3. Returns the same cached module on every subsequent call (no duplicate init).
+ *
+ * NOTE: `public/pdf.worker.min.mjs` is a copy of
+ * `node_modules/pdfjs-dist/build/pdf.worker.min.mjs`. If you bump the
+ * pdfjs-dist version, re-copy that file so the worker matches the library.
  */
 
 import type * as PdfjsLib from 'pdfjs-dist';
