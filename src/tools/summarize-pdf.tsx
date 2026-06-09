@@ -19,16 +19,15 @@ import {
   Copy,
   Download,
   Check,
-  Zap,
-  Gem,
   Briefcase,
   FileText,
   List,
   Type,
+  Info,
 } from 'lucide-react';
+import { getPdfjs } from '@/lib/pdf-worker';
 
 type SummaryType = 'brief' | 'detailed' | 'key-points';
-type Quality = 'standard' | 'high';
 
 interface PageSummary {
   pageNumber: number;
@@ -44,19 +43,19 @@ const summaryTypeOptions: {
   {
     value: 'brief',
     label: 'Brief Summary',
-    description: 'Quick 2-3 sentence overview',
+    description: 'Short overview of content',
     icon: Briefcase,
   },
   {
     value: 'detailed',
     label: 'Detailed Summary',
-    description: 'Comprehensive summary with all details',
+    description: 'Comprehensive text extraction',
     icon: FileText,
   },
   {
     value: 'key-points',
     label: 'Key Points',
-    description: 'Numbered list of key takeaways',
+    description: 'Extracted sentences and headings',
     icon: List,
   },
 ];
@@ -90,11 +89,88 @@ function parsePageRange(input: string, totalPages: number): number[] {
   return Array.from(pages).sort((a, b) => a - b);
 }
 
+/**
+ * Client-side summarization: extract key sentences from text.
+ * This is a heuristic approach — not AI — but works entirely offline.
+ */
+function generateSummary(
+  pageTexts: { pageNumber: number; text: string }[],
+  type: SummaryType
+): { summary: string; pageSummaries: PageSummary[] } {
+  const pageSummaries: PageSummary[] = [];
+
+  for (const page of pageTexts) {
+    const text = page.text.trim();
+    if (!text || text === '[No text content found on this page]') {
+      pageSummaries.push({ pageNumber: page.pageNumber, summary: '[No text content on this page]' });
+      continue;
+    }
+
+    // Split into sentences
+    const sentences = text
+      .replace(/\n+/g, ' ')
+      .split(/(?<=[.!?])\s+/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 15);
+
+    if (type === 'brief') {
+      // Take first 2-3 sentences per page
+      const briefSentences = sentences.slice(0, 3);
+      pageSummaries.push({
+        pageNumber: page.pageNumber,
+        summary: briefSentences.join(' ') || text.slice(0, 200),
+      });
+    } else if (type === 'key-points') {
+      // Extract sentences that look like key points (contain keywords, start with caps, etc.)
+      const keyPoints = sentences
+        .filter((s) => {
+          const isHeading = s.length < 80 && /^[A-Z]/.test(s);
+          const hasKeywords = /\b(important|key|main|summary|conclusion|result|note|critical|essential)\b/i.test(s);
+          return isHeading || hasKeywords;
+        })
+        .slice(0, 5);
+
+      // If no key points found, take first few sentences
+      const points = keyPoints.length > 0 ? keyPoints : sentences.slice(0, 4);
+      pageSummaries.push({
+        pageNumber: page.pageNumber,
+        summary: points.map((p, i) => `${i + 1}. ${p}`).join('\n'),
+      });
+    } else {
+      // Detailed: include more text
+      const detailedSentences = sentences.slice(0, 8);
+      pageSummaries.push({
+        pageNumber: page.pageNumber,
+        summary: detailedSentences.join(' ') || text.slice(0, 500),
+      });
+    }
+  }
+
+  // Build overall summary
+  const overallParts = pageSummaries
+    .filter((p) => !p.summary.startsWith('[No text'))
+    .map((p) => p.summary);
+
+  let summary: string;
+  if (type === 'brief') {
+    // Take first sentence from each page, up to 5
+    summary = overallParts.slice(0, 5).join('\n\n');
+  } else if (type === 'key-points') {
+    summary = overallParts.join('\n\n');
+  } else {
+    summary = overallParts.join('\n\n---\n\n');
+  }
+
+  return {
+    summary: summary || 'No text content could be extracted from this PDF.',
+    pageSummaries,
+  };
+}
+
 export function SummarizePDFTool() {
   const { files, setProcessing, setProgress, setError, resetProcessing } =
     useFileStore();
   const [summaryType, setSummaryType] = useState<SummaryType>('brief');
-  const [quality, setQuality] = useState<Quality>('standard');
   const [pageRange, setPageRange] = useState('all');
   const [summary, setSummary] = useState('');
   const [pageSummaries, setPageSummaries] = useState<PageSummary[]>([]);
@@ -113,11 +189,9 @@ export function SummarizePDFTool() {
       setProgressMessage('Loading PDF...');
       setSummary('');
       setPageSummaries([]);
-      setProcessing('Summarizing PDF with AI...');
+      setProcessing('Summarizing PDF...');
 
-      // Dynamic import of pdfjs-dist
-      const pdfjsLib = await import('pdfjs-dist');
-      pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+      const pdfjsLib = await getPdfjs();
 
       const pdf = await pdfjsLib.getDocument({ data: files[0].data }).promise;
       const totalPages = pdf.numPages;
@@ -129,63 +203,57 @@ export function SummarizePDFTool() {
         return;
       }
 
-      const scale = quality === 'high' ? 2 : 1;
-      const images: string[] = [];
-      const pageNums: number[] = [];
+      const pageTexts: { pageNumber: number; text: string }[] = [];
 
-      // Render pages as images
+      // Extract text from each page
       for (let idx = 0; idx < targetPages.length; idx++) {
         const pageNum = targetPages[idx];
-        const progressPct = Math.round(((idx + 1) / targetPages.length) * 30);
+        const progressPct = Math.round(((idx + 1) / targetPages.length) * 70);
         setProgressValue(progressPct);
-        setProgressMessage(
-          `Rendering page ${pageNum} of ${targetPages.length}...`
-        );
-        setProgress(progressPct, `Rendering page ${pageNum}...`);
+        setProgressMessage(`Extracting page ${pageNum} of ${targetPages.length}...`);
+        setProgress(progressPct, `Extracting page ${pageNum}...`);
 
         const page = await pdf.getPage(pageNum);
-        const viewport = page.getViewport({ scale });
-        const canvas = document.createElement('canvas');
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        const ctx = canvas.getContext('2d')!;
+        const textContent = await page.getTextContent();
 
-        await page.render({ canvasContext: ctx, viewport }).promise;
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-        images.push(dataUrl);
-        pageNums.push(pageNum);
+        const items = textContent.items
+          .filter((item): item is { str: string; transform: number[] } => 'str' in item);
+
+        let pageText = '';
+        let lastY: number | null = null;
+
+        for (const item of items) {
+          const y = Math.round(item.transform[5]);
+          if (lastY !== null && Math.abs(y - lastY) > 5) {
+            pageText += '\n';
+          } else if (lastY !== null && pageText.length > 0 && !pageText.endsWith('\n')) {
+            pageText += ' ';
+          }
+          pageText += item.str;
+          lastY = y;
+        }
+
+        pageTexts.push({
+          pageNumber: pageNum,
+          text: pageText.trim() || '[No text content found on this page]',
+        });
       }
 
-      // Send all images to API for AI summarization
-      setProgressValue(35);
-      setProgressMessage('AI is analyzing your document...');
-      setProgress(35, 'AI is analyzing your document...');
+      setProgressValue(80);
+      setProgressMessage('Generating summary...');
+      setProgress(80, 'Generating summary...');
 
-      const response = await fetch('/api/summarize-pdf', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          images,
-          pageNumbers: pageNums,
-          summaryType,
-        }),
-      });
+      // Generate client-side summary
+      const result = generateSummary(pageTexts, summaryType);
 
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.error || `API error: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      setSummary(data.summary || '');
-      setPageSummaries(data.pageSummaries || []);
+      setSummary(result.summary);
+      setPageSummaries(result.pageSummaries);
       setProgressValue(100);
       setProgressMessage('Summary complete!');
       setProgress(100, 'Summary complete!');
 
-      // Create a downloadable blob for the result
-      const textBlob = new Blob([data.summary || ''], { type: 'text/plain' });
+      // Create download blob from the generated summary (NOT stale state)
+      const textBlob = new Blob([result.summary], { type: 'text/plain' });
       const { setSuccess } = useFileStore.getState();
       setSuccess({
         blob: textBlob,
@@ -257,21 +325,21 @@ export function SummarizePDFTool() {
         </Button>
       }
     >
-      {/* AI-Powered Badge */}
+      {/* Badge */}
       <div className="flex items-center gap-2">
         <Badge
           variant="secondary"
           className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800"
         >
           <Sparkles className="h-3 w-3 mr-1" />
-          AI-Powered
+          Client-Side Summarization
         </Badge>
       </div>
 
       {summary ? (
         /* Results view */
         <div className="space-y-6">
-          {/* Combined summary card with gradient border */}
+          {/* Combined summary card */}
           <div className="relative rounded-xl p-[1px] bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500">
             <div className="rounded-xl bg-card p-6 space-y-4">
               <div className="flex items-center justify-between">
@@ -335,7 +403,7 @@ export function SummarizePDFTool() {
             </Button>
           </div>
 
-          {/* Per-page summaries in collapsible accordion */}
+          {/* Per-page summaries */}
           {pageSummaries.length > 1 && (
             <Accordion type="multiple" className="w-full">
               <AccordionItem value="page-summaries" className="border rounded-lg px-4">
@@ -377,14 +445,22 @@ export function SummarizePDFTool() {
             <div className="flex items-start gap-3">
               <Sparkles className="h-5 w-5 text-amber-500 dark:text-amber-400 shrink-0 mt-0.5" />
               <div className="space-y-1">
-                <p className="text-sm font-medium">AI-Powered PDF Summarization</p>
+                <p className="text-sm font-medium">PDF Summarization</p>
                 <p className="text-sm text-muted-foreground">
-                  Upload a PDF and our AI will analyze each page and generate a
-                  cohesive document summary. Choose the summary style that fits
-                  your needs.
+                  Upload a PDF and get a summary of its text content.
+                  Extracts key sentences and organizes them by page — all
+                  processed locally in your browser.
                 </p>
               </div>
             </div>
+          </div>
+
+          {/* Note */}
+          <div className="flex items-start gap-2 rounded-lg border border-amber-200 dark:border-amber-800/50 bg-amber-50/50 dark:bg-amber-950/20 p-3">
+            <Info className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <p className="text-xs text-amber-700 dark:text-amber-300">
+              Summarization uses heuristic text extraction. Results work best with text-rich documents.
+            </p>
           </div>
 
           {/* Summary type selector */}
@@ -419,57 +495,6 @@ export function SummarizePDFTool() {
                   </button>
                 );
               })}
-            </div>
-          </div>
-
-          {/* Quality selector */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Rendering Quality</label>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => setQuality('standard')}
-                className={`rounded-lg border p-3 text-left transition-all ${
-                  quality === 'standard'
-                    ? 'border-amber-500 bg-amber-50/50 dark:bg-amber-950/20 ring-1 ring-amber-500'
-                    : 'border-border hover:border-muted-foreground/30'
-                }`}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <Zap
-                    className={`h-4 w-4 ${
-                      quality === 'standard'
-                        ? 'text-amber-600 dark:text-amber-400'
-                        : 'text-muted-foreground'
-                    }`}
-                  />
-                  <span className="text-sm font-medium">Standard</span>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  1x scale — Faster processing
-                </p>
-              </button>
-              <button
-                onClick={() => setQuality('high')}
-                className={`rounded-lg border p-3 text-left transition-all ${
-                  quality === 'high'
-                    ? 'border-amber-500 bg-amber-50/50 dark:bg-amber-950/20 ring-1 ring-amber-500'
-                    : 'border-border hover:border-muted-foreground/30'
-                }`}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <Gem
-                    className={`h-4 w-4 ${
-                      quality === 'high'
-                        ? 'text-amber-600 dark:text-amber-400'
-                        : 'text-muted-foreground'
-                    }`}
-                  />
-                  <span className="text-sm font-medium">High</span>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  2x scale — Better quality
-                </p>
-              </button>
             </div>
           </div>
 
