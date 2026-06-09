@@ -1163,16 +1163,19 @@ function HeroSection() {
 function ToolsGrid() {
   const { navigate } = useNavStore();
   const { selectedCategory, setSelectedCategory } = React.useContext(CategoryFilterContext);
-  const [showOnboarding, setShowOnboarding] = useState(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        return !localStorage.getItem('pdf-tools-onboarding-dismissed');
-      } catch {
-        return false;
+  // Start `false` so server and first client render match (avoids hydration
+  // mismatch). Read localStorage after mount and reveal the banner then.
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  useEffect(() => {
+    try {
+      if (!localStorage.getItem('pdf-tools-onboarding-dismissed')) {
+        setShowOnboarding(true);
       }
+    } catch {
+      // localStorage unavailable (private mode, etc.) — leave banner hidden.
     }
-    return false;
-  });
+  }, []);
 
   const dismissOnboarding = useCallback(() => {
     setShowOnboarding(false);
