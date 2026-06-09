@@ -21,6 +21,7 @@ import {
   Code,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import { getPdfjs } from '@/lib/pdf-worker';
 
 type Quality = 'standard' | 'high';
 
@@ -78,9 +79,7 @@ export function PDFToMarkdownTool() {
       setPageResults([]);
       setProcessing('Converting PDF to Markdown...');
 
-      // Dynamic import of pdfjs-dist
-      const pdfjsLib = await import('pdfjs-dist');
-      pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+      const pdfjsLib = await getPdfjs();
 
       const pdf = await pdfjsLib.getDocument({ data: files[0].data }).promise;
       const totalPages = pdf.numPages;
@@ -92,73 +91,95 @@ export function PDFToMarkdownTool() {
         return;
       }
 
-      const scale = quality === 'high' ? 2 : 1;
-      const images: string[] = [];
-      const pageNums: number[] = [];
-
-      // Render pages as images
-      for (let idx = 0; idx < targetPages.length; idx++) {
-        const pageNum = targetPages[idx];
-        const progressPct = Math.round(((idx + 1) / targetPages.length) * 40);
-        setProgressValue(progressPct);
-        setProgressMessage(`Rendering page ${pageNum} of ${targetPages.length}...`);
-        setProgress(progressPct, `Rendering page ${pageNum}...`);
-
-        const page = await pdf.getPage(pageNum);
-        const viewport = page.getViewport({ scale });
-        const canvas = document.createElement('canvas');
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        const ctx = canvas.getContext('2d')!;
-
-        await page.render({ canvasContext: ctx, viewport }).promise;
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-        images.push(dataUrl);
-        pageNums.push(pageNum);
-      }
-
-      // Send to API for AI processing (one page at a time)
       const results: { pageNumber: number; markdown: string }[] = [];
 
-      for (let idx = 0; idx < images.length; idx++) {
-        const baseProgress = 40;
-        const progressPct =
-          baseProgress +
-          Math.round(((idx + 1) / images.length) * 55);
+      // Extract text and convert to markdown (client-side)
+      for (let idx = 0; idx < targetPages.length; idx++) {
+        const pageNum = targetPages[idx];
+        const progressPct = Math.round(((idx + 1) / targetPages.length) * 90);
         setProgressValue(progressPct);
         setProgressMessage(
-          `AI processing page ${pageNums[idx]} (${idx + 1}/${images.length})...`
+          `Converting page ${pageNum} (${idx + 1}/${targetPages.length})...`
         );
-        setProgress(
-          progressPct,
-          `AI processing page ${pageNums[idx]}...`
-        );
+        setProgress(progressPct, `Converting page ${pageNum}...`);
 
         try {
-          const response = await fetch('/api/pdf-to-markdown', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              images: [images[idx]],
-              pageNumbers: [pageNums[idx]],
-            }),
+          const page = await pdf.getPage(pageNum);
+          const textContent = await page.getTextContent();
+
+          const items = textContent.items
+            .filter((item): item is { str: string; transform: number[]; width: number; height: number } => 'str' in item);
+
+          // Group items into lines by Y position, detect font sizes for headings
+          let markdown = '';
+          let lastY: number | null = null;
+          let currentLine = '';
+          let currentFontSize = 0;
+          const lines: { text: string; fontSize: number }[] = [];
+
+          for (const item of items) {
+            const y = Math.round(item.transform[5]);
+            const fontSize = Math.round(Math.abs(item.transform[0]) || 12);
+
+            if (lastY !== null && Math.abs(y - lastY) > 3) {
+              // New line
+              if (currentLine.trim()) {
+                lines.push({ text: currentLine.trim(), fontSize: currentFontSize });
+              }
+              currentLine = item.str;
+              currentFontSize = fontSize;
+            } else {
+              if (currentLine && !currentLine.endsWith(' ') && item.str && !item.str.startsWith(' ')) {
+                currentLine += ' ';
+              }
+              currentLine += item.str;
+              currentFontSize = Math.max(currentFontSize, fontSize);
+            }
+            lastY = y;
+          }
+          if (currentLine.trim()) {
+            lines.push({ text: currentLine.trim(), fontSize: currentFontSize });
+          }
+
+          // Determine median font size to detect headings
+          const fontSizes = lines.map((l) => l.fontSize).filter((s) => s > 0);
+          const medianFontSize = fontSizes.length > 0
+            ? fontSizes.sort((a, b) => a - b)[Math.floor(fontSizes.length / 2)]
+            : 12;
+
+          // Convert lines to markdown
+          for (const line of lines) {
+            const text = line.text;
+            if (!text) {
+              markdown += '\n';
+              continue;
+            }
+
+            if (line.fontSize > medianFontSize * 1.5) {
+              markdown += `# ${text}\n\n`;
+            } else if (line.fontSize > medianFontSize * 1.2) {
+              markdown += `## ${text}\n\n`;
+            } else if (line.fontSize > medianFontSize * 1.05) {
+              markdown += `### ${text}\n\n`;
+            } else if (/^\d+\.\s/.test(text)) {
+              // Numbered list
+              markdown += `${text}\n`;
+            } else if (/^[•\-\*]\s/.test(text)) {
+              // Bullet list
+              markdown += `- ${text.replace(/^[•\-\*]\s*/, '')}\n`;
+            } else {
+              markdown += `${text}\n\n`;
+            }
+          }
+
+          results.push({
+            pageNumber: pageNum,
+            markdown: markdown.trim() || '*[No text content found on this page]*',
           });
-
-          if (!response.ok) {
-            const errData = await response.json().catch(() => ({}));
-            throw new Error(
-              errData.error || `API error: ${response.status}`
-            );
-          }
-
-          const data = await response.json();
-          if (data.pages && data.pages.length > 0) {
-            results.push(data.pages[0]);
-          }
         } catch (pageErr) {
           results.push({
-            pageNumber: pageNums[idx],
-            markdown: `> **Error processing page ${pageNums[idx]}:** ${pageErr instanceof Error ? pageErr.message : 'Unknown error'}`,
+            pageNumber: pageNum,
+            markdown: `> **Error processing page ${pageNum}:** ${pageErr instanceof Error ? pageErr.message : 'Unknown error'}`,
           });
         }
       }
@@ -168,13 +189,10 @@ export function PDFToMarkdownTool() {
       setProgressMessage('Conversion complete!');
       setProgress(100, 'Conversion complete!');
 
-      // Create a downloadable blob for the result
-      const markdownBlob = new Blob(
-        [results.map((p) => p.markdown).join('\n\n---\n\n')],
-        { type: 'text/markdown' }
-      );
+      // Create a downloadable blob from results (NOT stale allMarkdown)
+      const finalMarkdown = results.map((p) => p.markdown).join('\n\n---\n\n');
+      const markdownBlob = new Blob([finalMarkdown], { type: 'text/markdown' });
 
-      // Use setSuccess with the markdown file
       const { setSuccess } = useFileStore.getState();
       setSuccess({
         blob: markdownBlob,
@@ -252,7 +270,7 @@ export function PDFToMarkdownTool() {
           className="bg-gradient-to-r from-teal-50 to-emerald-50 dark:from-teal-950/30 dark:to-emerald-950/30 text-teal-700 dark:text-teal-300 border-teal-200 dark:border-teal-800"
         >
           <Sparkles className="h-3 w-3 mr-1" />
-          AI-Powered
+          Client-Side Conversion
         </Badge>
       </div>
 
@@ -333,11 +351,11 @@ export function PDFToMarkdownTool() {
             <div className="flex items-start gap-3">
               <Sparkles className="h-5 w-5 text-teal-500 dark:text-teal-400 shrink-0 mt-0.5" />
               <div className="space-y-1">
-                <p className="text-sm font-medium">AI-Powered Conversion</p>
+                <p className="text-sm font-medium">PDF to Markdown Conversion</p>
                 <p className="text-sm text-muted-foreground">
-                  Upload a PDF and our AI will convert each page to clean
-                  Markdown format, preserving headings, lists, tables, and
-                  formatting.
+                  Upload a PDF and convert each page to clean Markdown format.
+                  Detects headings, lists, and paragraphs based on text layout.
+                  Processed entirely in your browser.
                 </p>
               </div>
             </div>
