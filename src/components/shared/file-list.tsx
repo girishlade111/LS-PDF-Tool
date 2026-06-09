@@ -76,8 +76,9 @@ export function FileList() {
             const canvas = document.createElement('canvas');
             canvas.width = viewport.width;
             canvas.height = viewport.height;
-            const ctx = canvas.getContext('2d')!;
-            await page.render({ canvasContext: ctx, viewport }).promise;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) continue;
+            await page.render({ canvasContext: ctx, viewport, canvas }).promise;
             newThumbnails[file.id] = canvas.toDataURL('image/jpeg', 0.6);
           }
         } catch {
