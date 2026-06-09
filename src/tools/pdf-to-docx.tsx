@@ -20,6 +20,7 @@ import {
   Crown,
   Type,
 } from 'lucide-react';
+import { getPdfjs } from '@/lib/pdf-worker';
 
 type Quality = 'standard' | 'high' | 'ultra';
 
@@ -246,9 +247,7 @@ export function PDFToDOCXTool() {
       setPageResults([]);
       setProcessing('Converting PDF to DOCX...');
 
-      // Dynamic import of pdfjs-dist
-      const pdfjsLib = await import('pdfjs-dist');
-      pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+      const pdfjsLib = await getPdfjs();
 
       const pdf = await pdfjsLib.getDocument({ data: files[0].data }).promise;
       const totalPages = pdf.numPages;
@@ -260,82 +259,99 @@ export function PDFToDOCXTool() {
         return;
       }
 
-      const scale = scaleMap[quality];
-      const images: string[] = [];
-      const pageNums: number[] = [];
-
-      // Render pages as images
-      for (let idx = 0; idx < targetPages.length; idx++) {
-        const pageNum = targetPages[idx];
-        const progressPct = Math.round(((idx + 1) / targetPages.length) * 40);
-        setProgressValue(progressPct);
-        setProgressMessage(
-          `Rendering page ${pageNum} of ${targetPages.length}...`
-        );
-        setProgress(progressPct, `Rendering page ${pageNum}...`);
-
-        const page = await pdf.getPage(pageNum);
-        const viewport = page.getViewport({ scale });
-        const canvas = document.createElement('canvas');
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        const ctx = canvas.getContext('2d')!;
-
-        await page.render({ canvasContext: ctx, viewport }).promise;
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-        images.push(dataUrl);
-        pageNums.push(pageNum);
-      }
-
-      // Send to API for AI processing (one page at a time)
       const results: { pageNumber: number; content: string }[] = [];
 
-      for (let idx = 0; idx < images.length; idx++) {
-        const baseProgress = 40;
-        const progressPct =
-          baseProgress +
-          Math.round(((idx + 1) / images.length) * 55);
+      // Extract text from each page (client-side)
+      for (let idx = 0; idx < targetPages.length; idx++) {
+        const pageNum = targetPages[idx];
+        const progressPct = Math.round(((idx + 1) / targetPages.length) * 80);
         setProgressValue(progressPct);
         setProgressMessage(
-          `AI processing page ${pageNums[idx]} (${idx + 1}/${images.length})...`
+          `Extracting page ${pageNum} (${idx + 1}/${targetPages.length})...`
         );
-        setProgress(progressPct, `AI processing page ${pageNums[idx]}...`);
+        setProgress(progressPct, `Extracting page ${pageNum}...`);
 
         try {
-          const response = await fetch('/api/pdf-to-docx', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              images: [images[idx]],
-              pageNumbers: [pageNums[idx]],
-            }),
+          const page = await pdf.getPage(pageNum);
+          const textContent = await page.getTextContent();
+
+          const items = textContent.items
+            .filter((item): item is { str: string; transform: number[] } => 'str' in item);
+
+          // Group items into lines, detect headings by font size
+          let lastY: number | null = null;
+          let currentLine = '';
+          let currentFontSize = 0;
+          const lines: { text: string; fontSize: number }[] = [];
+
+          for (const item of items) {
+            const y = Math.round(item.transform[5]);
+            const fontSize = Math.round(Math.abs(item.transform[0]) || 12);
+
+            if (lastY !== null && Math.abs(y - lastY) > 3) {
+              if (currentLine.trim()) {
+                lines.push({ text: currentLine.trim(), fontSize: currentFontSize });
+              }
+              currentLine = item.str;
+              currentFontSize = fontSize;
+            } else {
+              if (currentLine && !currentLine.endsWith(' ') && item.str && !item.str.startsWith(' ')) {
+                currentLine += ' ';
+              }
+              currentLine += item.str;
+              currentFontSize = Math.max(currentFontSize, fontSize);
+            }
+            lastY = y;
+          }
+          if (currentLine.trim()) {
+            lines.push({ text: currentLine.trim(), fontSize: currentFontSize });
+          }
+
+          // Determine median font size
+          const fontSizes = lines.map((l) => l.fontSize).filter((s) => s > 0);
+          const medianFontSize = fontSizes.length > 0
+            ? fontSizes.sort((a, b) => a - b)[Math.floor(fontSizes.length / 2)]
+            : 12;
+
+          // Convert to markdown
+          let pageContent = '';
+          for (const line of lines) {
+            const text = line.text;
+            if (!text) continue;
+
+            if (line.fontSize > medianFontSize * 1.5) {
+              pageContent += `# ${text}\n\n`;
+            } else if (line.fontSize > medianFontSize * 1.2) {
+              pageContent += `## ${text}\n\n`;
+            } else if (line.fontSize > medianFontSize * 1.05) {
+              pageContent += `### ${text}\n\n`;
+            } else if (/^\d+\.\s/.test(text)) {
+              pageContent += `${text}\n`;
+            } else if (/^[\u2022\-\*]\s/.test(text)) {
+              pageContent += `- ${text.replace(/^[\u2022\-\*]\s*/, '')}\n`;
+            } else {
+              pageContent += `${text}\n\n`;
+            }
+          }
+
+          results.push({
+            pageNumber: pageNum,
+            content: pageContent.trim() || '[No text content found on this page]',
           });
-
-          if (!response.ok) {
-            const errData = await response.json().catch(() => ({}));
-            throw new Error(
-              errData.error || `API error: ${response.status}`
-            );
-          }
-
-          const data = await response.json();
-          if (data.pages && data.pages.length > 0) {
-            results.push(data.pages[0]);
-          }
         } catch (pageErr) {
           results.push({
-            pageNumber: pageNums[idx],
-            content: `> **Error processing page ${pageNums[idx]}:** ${pageErr instanceof Error ? pageErr.message : 'Unknown error'}`,
+            pageNumber: pageNum,
+            content: `> **Error processing page ${pageNum}:** ${pageErr instanceof Error ? pageErr.message : 'Unknown error'}`,
           });
         }
       }
 
       setPageResults(results);
-      setProgressValue(100);
-      setProgressMessage('Conversion complete!');
-      setProgress(100, 'Conversion complete!');
+      setProgressValue(90);
+      setProgressMessage('Creating document...');
+      setProgress(90, 'Creating document...');
 
-      // Create a downloadable DOC blob
+      // Create DOC blob from results (NOT stale allContent)
       const combinedContent = results.map((p) => p.content).join('\n\n---\n\n');
       const htmlContent = markdownToHtml(combinedContent);
       const docHtml = createDocContent(
@@ -345,6 +361,10 @@ export function PDFToDOCXTool() {
       const docBlob = new Blob([docHtml], {
         type: 'application/msword',
       });
+
+      setProgressValue(100);
+      setProgressMessage('Conversion complete!');
+      setProgress(100, 'Conversion complete!');
 
       const { setSuccess } = useFileStore.getState();
       setSuccess({
@@ -458,7 +478,7 @@ export function PDFToDOCXTool() {
           className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800"
         >
           <Sparkles className="h-3 w-3 mr-1" />
-          AI-Powered
+          Client-Side Conversion
         </Badge>
       </div>
 
@@ -536,11 +556,11 @@ export function PDFToDOCXTool() {
             <div className="flex items-start gap-3">
               <Sparkles className="h-5 w-5 text-blue-500 dark:text-blue-400 shrink-0 mt-0.5" />
               <div className="space-y-1">
-                <p className="text-sm font-medium">AI-Powered PDF to DOCX Conversion</p>
+                <p className="text-sm font-medium">PDF to DOCX Conversion</p>
                 <p className="text-sm text-muted-foreground">
-                  Upload a PDF and our AI will extract and convert each page to a
-                  Word-compatible document format, preserving headings, paragraphs,
-                  lists, tables, and formatting.
+                  Upload a PDF and convert it to a Word-compatible document.
+                  Extracts text, headings, and structure — all processed locally
+                  in your browser.
                 </p>
               </div>
             </div>
