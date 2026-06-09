@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { ToolPage } from '@/components/shared/tool-page';
 import { useFileStore } from '@/store/file-store';
 import { rearrangePDFPages } from '@/lib/pdf-utils';
+import { getPdfjs } from '@/lib/pdf-worker';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';

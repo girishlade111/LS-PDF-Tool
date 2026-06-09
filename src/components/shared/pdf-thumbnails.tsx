@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { FileText } from 'lucide-react';
 import { PDFFile } from '@/store/file-store';
+import { getPdfjs } from '@/lib/pdf-worker';
 
 interface PDFThumbnailsProps {
   file: PDFFile;

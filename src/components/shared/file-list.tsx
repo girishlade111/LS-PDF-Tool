@@ -5,6 +5,7 @@ import { X, FileText, GripVertical, ImageIcon, Plus, File } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFileStore, PDFFile } from '@/store/file-store';
 import { formatFileSize, generateId, getPDFPageCount } from '@/lib/pdf-utils';
+import { getPdfjs } from '@/lib/pdf-worker';
 
 function getFileTypeIcon(type: string) {
   if (type === 'application/pdf') return FileText;
