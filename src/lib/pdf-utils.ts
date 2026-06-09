@@ -1,4 +1,5 @@
 import { PDFDocument, degrees, rgb, StandardFonts } from 'pdf-lib';
+import { getPdfjs } from '@/lib/pdf-worker';
 
 /**
  * Generate a unique ID
@@ -305,8 +306,7 @@ export async function flattenPDF(
   const onProgress = options?.onProgress;
 
   // Dynamic import of pdfjs-dist to avoid SSR issues
-  const pdfjsLib = await import('pdfjs-dist');
-  pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+  const pdfjsLib = await getPdfjs();
 
   const scale = quality === 'high' ? 2.5 : 1.5;
 
@@ -474,8 +474,7 @@ export async function redactPDF(
   }
 ): Promise<Uint8Array> {
   // Dynamic import of pdfjs-dist
-  const pdfjsLib = await import('pdfjs-dist');
-  pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+  const pdfjsLib = await getPdfjs();
 
   const {
     caseSensitive = false,
@@ -617,8 +616,7 @@ export async function pdfToHTML(
   data: ArrayBuffer,
   options?: { mode?: 'simple' | 'structured'; includeImages?: boolean; pageRange?: number[] }
 ): Promise<{ html: string; pages: string[] }> {
-  const pdfjsLib = await import('pdfjs-dist');
-  pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+  const pdfjsLib = await getPdfjs();
 
   const mode = options?.mode ?? 'simple';
   const pdfDoc = await pdfjsLib.getDocument({ data: new Uint8Array(data) }).promise;
